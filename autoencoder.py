@@ -125,7 +125,7 @@ if __name__ == '__main__':
     for X, y in test_dataloader:
         show_images(model(X.to(device)).to('cpu'), X)
         break
-    torch.save(model.state_dict(), 'models/autoencoders/autoencoder_minst.pth')
+    torch.save(model.state_dict(), 'models/autoencoders/autoencoder_mnist.pth')
     print("Done!")
 
 
