@@ -109,7 +109,7 @@ def test_loop(dataloader, noise_dataloader,model, loss_fn):
 if __name__ == '__main__':
     NOISE_FACTOR = 0.1
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_availabel() else "cpu"
     model = Denoise_AutoEncoder_MNIST()
     model.to(device)
 

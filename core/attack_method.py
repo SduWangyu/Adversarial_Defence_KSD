@@ -1,15 +1,9 @@
 import torch
 from torch.autograd import Variable
 import numpy as np
-from torch.utils.data import DataLoader
 import torch.utils.data.dataset
-import utils as ksd
 from torch import nn
-import utils as ksd
-import torchvision
-from torchvision import transforms
-import classifiers as clfs
-from torch.utils import data
+from utils import utils
 
 
 def get_adv_img_tensor(img_teonsor, device=None):
@@ -33,7 +27,7 @@ def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
     loss_fn = nn.CrossEntropyLoss()
     for i in range(iteration):
         h_adv = net(x_adv)
-        adv_label = ksd.argmax(h_adv, 1)
+        adv_label = utils.argmax(h_adv, 1)
         if target:
             loss = loss_fn(h_adv, y_input)
             if adv_label == y_input:
@@ -49,11 +43,11 @@ def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
 
         x_adv.grad.sign_()
         x_adv = x_adv - alpha * x_adv.grad
-        x_adv = ksd.where(x_adv > x_input + eps, x_input + eps, x_adv)
-        x_adv = ksd.where(x_adv < x_input - eps, x_input - eps, x_adv)
+        x_adv = utils.where(x_adv > x_input + eps, x_input + eps, x_adv)
+        x_adv = utils.where(x_adv < x_input - eps, x_input - eps, x_adv)
         x_adv = torch.clamp(x_adv, x_val_min, x_val_max)
         x_adv = Variable(x_adv.data, requires_grad=True)
-    adv_label = ksd.argmax(h_adv, 1)
+    adv_label = utils.argmax(h_adv, 1)
     return x_adv, adv_label
 
 
@@ -225,13 +219,6 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
     return torch.Tensor(o_bestattack)
 
 
-
-
-
-
-
-
-
 if __name__ == "__main__":
     pass
 
@@ -240,15 +227,15 @@ if __name__ == "__main__":
     #                                          transforms.ToTensor(),
     #                                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
     #
-    # original_image_tensor = ksd.image_preprocessing(original_image_path, ToTensor_transform, is_unsqueeze=True)
+    # original_image_tensor = utils.image_preprocessing(original_image_path, ToTensor_transform, is_unsqueeze=True)
     #
     # adv_image_tensor = Variable(original_image_tensor.clone().detach().to(device))
     # adv_image_tensor.requires_grad = True
 
-    # test_dataloader = ksd.load_data_mnist_test(16)
+    # test_dataloader = utils.load_data_mnist_test(16)
     # for X, y in test_dataloader:
     #     X, y = X.to(device), y.to(device)
-    #     y_hat_ori = ksd.argmax(model(X), 1)
+    #     y_hat_ori = utils.argmax(model(X), 1)
     #     print(y_hat_ori)
     #     print(y)
     #     target_label = (y_hat_ori + 1) % 10
@@ -258,7 +245,7 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load('./models/classifiers/classifier_mnist.pth'))
     # model.eval()
     # model.to(device)
-    # test_data_set = ksd.load_data_mnist_test(100)
+    # test_data_set = utils.load_data_mnist_test(100)
     # for X_iter, y_iter in test_data_set:
     #     for i in range(100):
     #         print(X_iter[i].shape)
@@ -272,8 +259,8 @@ if __name__ == "__main__":
     # score = score / torch.sum(output, dtype=torch.float32)
     # print("score={},label={}".format(score.data, label.data))
     # # adv_image_tensor = deepfool_target(model, original_image_tensor, target_label=288)
-    # adv_image_tensor = fgsm(model, original_image_tensor, e=0.001, device=ksd.try_gpu())
+    # adv_image_tensor = fgsm(model, original_image_tensor, e=0.001, device=utils.try_gpu())
     # # adv_image_tensor = deepfool_untarget(model, original_image_tensor, original_label=label)
     # # adv_image_tensor = cw(model, original_image_tensor, target_label=288)
-    # ksd.transform_to_img_from_dataset(adv_image_tensor.cpu().clone().detach(), ToTensor_transform, "pics/test111_adv.png")
-    # ksd.show_images_diff(original_image_tensor, adv_image_tensor.cpu().clone().detach(), ToTensor_transform, label, 288)
+    # utils.transform_to_img_from_dataset(adv_image_tensor.cpu().clone().detach(), ToTensor_transform, "pics/test111_adv.png")
+    # utils.show_images_diff(original_image_tensor, adv_image_tensor.cpu().clone().detach(), ToTensor_transform, label, 288)

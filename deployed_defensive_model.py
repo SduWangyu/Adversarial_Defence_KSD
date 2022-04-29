@@ -1,10 +1,8 @@
 from torch import nn
-import autoencoders as aes
-import classifiers as clfs
-import torch.nn.functional as F
+from core import classifiers as clfs, autoencoders as aes
 from torchvision import datasets, transforms
 import torch
-import utils as ksd
+from utils import utils as ksd
 
 
 class DefenceMNIST(nn.Module):
@@ -38,8 +36,8 @@ if __name__ == '__main__':
         train=False,
         transform=transforms.ToTensor()
     )
-    from attack_method import fgsm
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    from core.attack_method import fgsm
+    device = 'cuda' if torch.cuda.is_availabel() else 'cpu'
     for X, y in data:
         net.to(device)
         X = X.to(device)

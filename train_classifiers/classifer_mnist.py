@@ -1,7 +1,7 @@
 import torch
-import utils as ksd
-from classifiers import Classifer_MNIST
-from autoencoders import ConvAutoEncoder
+from utils import utils as ksd
+from core.classifiers import Classifer_MNIST
+from core.autoencoders import ConvAutoEncoder
 if __name__ == '__main__':
     batch_size = 64
     train_iter, test_iter = ksd.load_data_mnist(batch_size)

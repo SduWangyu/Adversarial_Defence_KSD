@@ -27,7 +27,6 @@ class AutoEncoderMNIST(nn.Module):
         return output
 
 
-
 class DenoiseAutoEncoderMNIST(nn.Module):
     def __init__(self):
         super(DenoiseAutoEncoderMNIST, self).__init__()
@@ -109,7 +108,7 @@ class ConvAutoEncoderMNIST(nn.Module):
         x = self.decoder_conv(x)
         return x
 
-    def load_exist(self, path="./models/autoencoders/conv_autoencoder_mnist.pth", is_eval=True):
+    def load_exist(self, path, is_eval=True):
         self.load_state_dict(torch.load(path))
         if is_eval:
             self.eval()
@@ -214,5 +213,3 @@ class ResAutoEncoderCIFAR10(nn.Module):
         out_conv = self.decode_out_conv(rb6)
         output = self.decode_tanh(out_conv)
         return output
-
-

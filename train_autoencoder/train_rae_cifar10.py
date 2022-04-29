@@ -1,8 +1,6 @@
-from torch import nn
 import torch
-import utils as ksd
-import matplotlib.pyplot as plt
-from autoencoders import ResAutoEncoderCIFAR10
+from utils import utils as ksd
+from core.autoencoders import ResAutoEncoderCIFAR10
 
 
 if __name__ == '__main__':
