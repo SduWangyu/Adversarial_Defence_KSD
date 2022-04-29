@@ -12,10 +12,10 @@ def accuracy(y_hat, y):
     """
     # 如果是二维的数据的话，就按行取最大值的索引
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
-        y_hat = argmax(y_hat, axis=1)
+        y_hat = y_hat.argmax(axis=1)
     # 按位运算，获取正确的个数
-    cmp = astype(y_hat, y.dtype) == y
-    return float(reduce_sum(astype(cmp, y.dtype)))
+    cmp = y_hat.astype(y.dtype) == y
+    return float(cmp.astype(y.dtype).reduce_sum())
 
 
 def accuracy_gpu(net, data_iter, ae=None, device=None):
@@ -39,13 +39,13 @@ def accuracy_gpu(net, data_iter, ae=None, device=None):
                 X = X.to(device)
                 X_rec = ae(X)
                 y = y.to(device)
-                metric.add(accuracy(net(X), y), size(y))
-                metric.add(accuracy(net(X_rec), y), size(y))
+                metric.add(accuracy(net(X), y), y.size())
+                metric.add(accuracy(net(X_rec), y), y.size())
         else:
             for X, y in data_iter:
                 X = X.to(device)
                 y = y.to(device)
-                metric.add(accuracy(net(X), y), size(y))
+                metric.add(accuracy(net(X), y), y.size())
     return metric[0] / metric[1]
 
 
@@ -63,7 +63,7 @@ def loss_gpu(net, data_iter, loss_fn, device=None):
         for X, y in data_iter:
             X = X.to(device)
             X_R = net(X)
-            metric.add(X.shape[0] * loss_fn(X_R, X).item(), size(y))
+            metric.add(X.shape[0] * loss_fn(X_R, X).item(), y.size())
     return metric[0] / metric[1]
 
 
@@ -76,4 +76,4 @@ def jenson_shannon_divergence(net_1_logit, net_2_logit):
     loss = 0.0
     loss += F.kl_div(F.log_softmax(net_1_logit, dim=1), total_m, reduction="none")
     loss += F.kl_div(F.log_softmax(net_2_logit, dim=1), total_m, reduction="none")
-    return 0.5 * reduce_sum(loss, 1)
+    return 0.5 * loss.reduce_sum(1)
