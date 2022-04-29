@@ -1,11 +1,15 @@
 import torch
-from torchvision import transforms
 from torch.autograd import Variable
 import numpy as np
-import torchvision.models as models
+from torch.utils.data import DataLoader
+import torch.utils.data.dataset
 import utils as ksd
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from torch import nn
+import utils as ksd
+import torchvision
+from torchvision import transforms
+import classifiers as clfs
+from torch.utils import data
 
 
 def get_adv_img_tensor(img_teonsor, device=None):
@@ -13,42 +17,48 @@ def get_adv_img_tensor(img_teonsor, device=None):
     return adv_image_tensor
 
 
-def fgsm(model, img_tensor, e=0.001, max_iterations=500, target_label=1, device=None):
-    """
-    fgsm 目标攻击算法
-    :param model: 要攻击的模型
-    :param img_tensor: 传入的图片的tensor，后面会发生改变，所以直接传攻击结果向量即可
-    :param e: 超参数
-    :param max_iterations: 最大迭代次数
-    :param target_label:  目标类别
-    :return: True or False 攻击是否成功
-    """
-
-    adv_img_tensor = get_adv_img_tensor(img_tensor, device=device)
-    # 模型的参数不需要发生变化
-    for param in model.parameters():
-        param.requires_grad = False
-    optimizer = torch.optim.Adam([adv_img_tensor])
-    target = Variable(torch.Tensor([float(target_label)]).to(device).long())
-    loss_func = torch.nn.CrossEntropyLoss()
-    for epoch in range(max_iterations):
-        # forward + backward
-        output = model(torch.unsqueeze(adv_img_tensor, 0))
-        loss = loss_func(output, target)
-        label = np.argmax(output.data.cpu().numpy())
-        # 如果定向攻击成功
-        if label == target:
-            return adv_img_tensor
-        # 梯度清零
-        optimizer.zero_grad()
-        # 反向传递 计算梯度
-        loss.backward()
-        adv_img_tensor.data = adv_img_tensor.data - e * torch.sign(adv_img_tensor.grad.data)
+def copy_tensor(original_tensor, device=None, re_grad=True):
+    if device is None:
+        return_tensor = Variable(original_tensor.clone().detach().to(original_tensor.device.type),
+                                 requires_grad=re_grad)
     else:
-        return None
+        return_tensor = Variable(original_tensor.clone().detach().to(device),
+                                 requires_grad=re_grad)
+    return return_tensor
 
 
-def deepfool_untarget(model, img_tensor, original_label, max_iterations=100, num_classes=1000, overshoot=0.02, device=None):
+def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
+           x_val_min=-1, x_val_max=1, device=None):
+    x_adv = copy_tensor(x_input, device, True)
+    loss_fn = nn.CrossEntropyLoss()
+    for i in range(iteration):
+        h_adv = net(x_adv)
+        adv_label = ksd.argmax(h_adv, 1)
+        if target:
+            loss = loss_fn(h_adv, y_input)
+            if adv_label == y_input:
+                return x_adv, adv_label
+        else:
+            loss = -loss_fn(h_adv, y_input)
+            if adv_label != y_input:
+                return x_adv, adv_label
+        net.zero_grad()
+        if x_adv.grad is not None:
+            x_adv.grad.data.fill_(0)
+        loss.backward()
+
+        x_adv.grad.sign_()
+        x_adv = x_adv - alpha * x_adv.grad
+        x_adv = ksd.where(x_adv > x_input + eps, x_input + eps, x_adv)
+        x_adv = ksd.where(x_adv < x_input - eps, x_input - eps, x_adv)
+        x_adv = torch.clamp(x_adv, x_val_min, x_val_max)
+        x_adv = Variable(x_adv.data, requires_grad=True)
+    adv_label = ksd.argmax(h_adv, 1)
+    return x_adv, adv_label
+
+
+def deepfool_untarget(model, img_tensor, original_label, max_iterations=100,
+                      num_classes=1000, overshoot=0.02, device=None):
     adv_img_tensor = get_adv_img_tensor(img_tensor)
     input_shape = adv_img_tensor.cpu().detach().numpy().shape
     w = np.zeros(input_shape)
@@ -120,7 +130,7 @@ def deepfool_target(model, img_tensor, target_label,
 
 
 def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search_steps=10,
-       confidence=1e2, k=40, box_area=(-3.0, 3.0), num_labels=1000, target_label=288):
+       confidence=1e2, k=40, box_area=(-3.0, 3.0), num_labels=1000, target_label=288, device=None):
     """
     cw攻击算法 ，有目标攻击
     :param model:   攻击的分类器
@@ -215,9 +225,73 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
     return torch.Tensor(o_bestattack)
 
 
+class MyDataset(data.Dataset):
+    def __init__(self, data_size):
+        super(MyDataset, self).__init__()
+        self.x = np.zeros(data_size)
+        self.y = np.zeros(data_size[0])
+
+    def __getitem__(self, index):
+        img, label = self.x[index], self.y[index]
+        return img, label
+
+    def __len__(self):
+        return self.x.shape[0]
+
+    def update_data(self, index, data_in):
+        self.x[index] = data_in[0]
+        self.y[index] = data_in[1]
+
+
+def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=200, device=None):
+    dataset_org = MyDataset((adv_num, 1, 28, 28))
+    dataset_adv = MyDataset((adv_num, 1, 28, 28))
+    if attack_dataset_name == "mnist":
+        train_data = torchvision.datasets.MNIST(
+            root='./data',
+            train=True,
+            transform=transforms.ToTensor(),
+            download=True
+        )
+        # device = ksd.try_gpu()
+        net = clfs.Classifer_MNIST()
+        net.load_exist()
+        net.to(device)
+    # 200
+    data_iter = DataLoader(train_data, batch_size=1)
+    gen_adv_num = 0
+    if attack_method == "fgsm_i":
+        for X, y in data_iter:
+            X, y = X.to(device), y.to(device)
+            X_adv, y_adv = fgsm_i(net, X, y, eps=attack_params['eps'], alpha=attack_params['alpha'],
+                                  iteration=attack_params['iteration'], device=device)
+            if y_adv != y:
+                dataset_org.update_data(gen_adv_num, (X.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
+                dataset_adv.update_data(gen_adv_num,
+                                        (X_adv.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
+                gen_adv_num += 1
+                print(gen_adv_num)
+
+            if gen_adv_num == adv_num:
+                break
+        torch.save(dataset_adv, "./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(int(attack_params['eps']*10)))
+        torch.save(dataset_org, "./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(int(attack_params['eps']*10)))
+
+
 if __name__ == "__main__":
-    device = ksd.try_gpu()
-    import classifiers as clfs
+    fgsm_params = {
+        'eps': 0.2,
+        'alpha': 1,
+        'iteration': 1000
+    }
+    get_adv_dataset("mnist", "fgsm_i", fgsm_params, adv_num=200, device=None)
+    # adv_dataset = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv.pt")
+    # data_iter = DataLoader(adv_dataset, batch_size=1)
+    # for x,y in data_iter:
+    #     print(x.shape)
+    #     print(y.shape)
+    #     break
+
     # original_image_path = "./pics/cropped_panda.jpg"
     # ToTensor_transform = transforms.Compose([transforms.Resize((224, 224)),
     #                                          transforms.ToTensor(),
@@ -228,19 +302,27 @@ if __name__ == "__main__":
     # adv_image_tensor = Variable(original_image_tensor.clone().detach().to(device))
     # adv_image_tensor.requires_grad = True
 
-    model = clfs.Classifer_MNIST()
-    model.load_state_dict(torch.load('./models/classifiers/classifier_mnist.pth'))
-    model.eval()
-    model.to(device)
-    test_data_set = ksd.load_data_mnist_test(100)
-    for X_iter, y_iter in test_data_set:
-        for i in range(100):
-            print(X_iter[i].shape)
-            X_adv = fgsm(model, X_iter[i], e=0.01, device=device, target_label=1)
-            print(X_adv.shape)
-            break
-        break
-
+    # test_dataloader = ksd.load_data_mnist_test(16)
+    # for X, y in test_dataloader:
+    #     X, y = X.to(device), y.to(device)
+    #     y_hat_ori = ksd.argmax(model(X), 1)
+    #     print(y_hat_ori)
+    #     print(y)
+    #     target_label = (y_hat_ori + 1) % 10
+    #     X_adv, y_hat_adv = fgsm(model, X, device=device, target_label=target_label)
+    #     print(y_hat_adv)
+    #     break
+    # model.load_state_dict(torch.load('./models/classifiers/classifier_mnist.pth'))
+    # model.eval()
+    # model.to(device)
+    # test_data_set = ksd.load_data_mnist_test(100)
+    # for X_iter, y_iter in test_data_set:
+    #     for i in range(100):
+    #         print(X_iter[i].shape)
+    #         X_adv = fgsm(model, X_iter[i], e=0.01, device=device, target_label=1)
+    #         print(X_adv.shape)
+    #         break
+    #     break
 
     # output = torch.softmax(output, 1, dtype=torch.float32)
     # score, label = torch.max(output, 1)

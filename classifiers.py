@@ -32,6 +32,11 @@ class Classifer_MNIST(nn.Module):
         x = self.classifier(x)
         return x
 
+    def load_exist(self, path="./models/classifiers/classifier_mnist.pth", is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
+
 
 class Classifer_CIFAR10(nn.Module):
     def __init__(self, num_class: int = 10) -> None:

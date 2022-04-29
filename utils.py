@@ -357,14 +357,14 @@ def train_autoencoder(ae, train_iter, test_iter, num_epochs, lr, device):
           f'on {str(device)}')
 
 
-def add_noise(img_batch, noise_factor):
+def add_noise(img_batch, noise_factor, device):
     """
     给img_batch 添加噪音
     :param img_batch: 要添加的数据
     :param noise_factor: 扰动参数
     :return: img_batch_noise
     """
-    return img_batch + (noise_factor * torch.normal(0, 1, img_batch.shape))
+    return img_batch + (noise_factor * torch.normal(0, 1, img_batch.shape).to(device))
 
 
 def train_autoencoder_and_save(autoencoder, train_iter, test_iter, num_epochs, lr, device, noise_factor=0.3,
@@ -392,7 +392,7 @@ def train_autoencoder_and_save(autoencoder, train_iter, test_iter, num_epochs, l
             timer.start()
             optimizer.zero_grad()
             X = X.to(device)
-            X_noise = add_noise(X, noise_factor)
+            X_noise = add_noise(X, noise_factor, device)
             X_R = autoencoder(X_noise)
             loss = loss_fn(X, X_R)
             loss.backward()
@@ -625,6 +625,62 @@ def test_defence(dataset_name, device=None, attack_name='fgsm'):
             print(f'共有正常：{100}, 发现对抗样本：{error_num}，误报率率：{100 * error_num / 100:.2f}%')
             break
 
+
+def show_images_ae_minst(decode_images, x_test):
+    """
+    plot the images.
+    :param decode_images: the images after decoding
+    :param x_test: testing data
+    :return:
+    """
+    from matplotlib import pyplot as plt
+    n = 10
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        ax = plt.subplot(2, n, i+1)
+        ax.imshow(x_test[i].reshape(28, 28, 1))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax = plt.subplot(2, n, i + 1 + n)
+        ax.imshow(decode_images[i].detach().numpy().reshape(28, 28, 1))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.show()
+
+
+def show_images_ae_cifar10(decode_images, x_test):
+    """
+    plot the images.
+    :param decode_images: the images after decoding
+    :param x_test: testing data
+    :return:
+    """
+    from matplotlib import pyplot as plt
+    n = 10
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        ax = plt.subplot(2, n, i+1)
+        x_test_show = x_test[i].transpose(1, 0).transpose(2, 1)
+        ax.imshow(x_test_show)
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax = plt.subplot(2, n, i + 1 + n)
+        ax.imshow(decode_images[i].detach().numpy().transpose(1, 2, 0))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.show()
+
+def where(cond, x, y):
+    """
+    code from :
+        https://discuss.pytorch.org/t/how-can-i-do-the-operation-the-same-as-np-where/1329/8
+    """
+    cond = cond.float()
+    return (cond*x) + ((1-cond)*y)
 
 argmax = lambda x, *args, **kwargs: x.argmax(*args, **kwargs)
 astype = lambda x, *args, **kwargs: x.type(*args, **kwargs)
