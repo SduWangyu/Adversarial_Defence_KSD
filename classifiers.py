@@ -36,10 +36,7 @@ class ClassiferMNIST(nn.Module):
         self.load_state_dict(torch.load(path))
         if is_eval:
             self.eval()
-<<<<<<< HEAD
 
-=======
->>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
 
 
 class ClassiferCIFAR10(nn.Module):

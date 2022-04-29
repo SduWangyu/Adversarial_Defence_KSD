@@ -225,93 +225,15 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
     return torch.Tensor(o_bestattack)
 
 
-<<<<<<< HEAD
-class MyDataset(data.Dataset):
-    def __init__(self, data_size):
-        super(MyDataset, self).__init__()
-        self.x = np.zeros(data_size)
-        self.y = np.zeros(data_size[0])
-
-    def __getitem__(self, index):
-        img, label = self.x[index], self.y[index]
-        return img, label
-
-    def __len__(self):
-        return self.x.shape[0]
-
-    def update_data(self, index, data_in):
-        self.x[index] = data_in[0]
-        self.y[index] = data_in[1]
-
-
-def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=200, device=None):
-    dataset_org = MyDataset((adv_num, 1, 28, 28))
-    dataset_adv = MyDataset((adv_num, 1, 28, 28))
-    if attack_dataset_name == "mnist":
-        train_data = torchvision.datasets.MNIST(
-            root='./data',
-            train=True,
-            transform=transforms.ToTensor(),
-            download=True
-        )
-        # device = ksd.try_gpu()
-        net = clfs.Classifer_MNIST()
-        net.load_exist()
-        net.to(device)
-    # 200
-    data_iter = DataLoader(train_data, batch_size=1)
-    gen_adv_num = 0
-    if attack_method == "fgsm_i":
-        for X, y in data_iter:
-            X, y = X.to(device), y.to(device)
-            X_adv, y_adv = fgsm_i(net, X, y, eps=attack_params['eps'], alpha=attack_params['alpha'],
-                                  iteration=attack_params['iteration'], device=device)
-            if y_adv != y:
-                dataset_org.update_data(gen_adv_num, (X.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
-                dataset_adv.update_data(gen_adv_num,
-                                        (X_adv.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
-                gen_adv_num += 1
-                print(gen_adv_num)
-
-            if gen_adv_num == adv_num:
-                break
-        torch.save(dataset_adv, "./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(int(attack_params['eps']*10)))
-        torch.save(dataset_org, "./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(int(attack_params['eps']*10)))
-=======
 
 
 
 
->>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
+
 
 
 if __name__ == "__main__":
-    fgsm_params = {
-<<<<<<< HEAD
-        'eps': 0.2,
-        'alpha': 1,
-        'iteration': 1000
-    }
-    get_adv_dataset("mnist", "fgsm_i", fgsm_params, adv_num=200, device=None)
-    # adv_dataset = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv.pt")
-    # data_iter = DataLoader(adv_dataset, batch_size=1)
-    # for x,y in data_iter:
-    #     print(x.shape)
-    #     print(y.shape)
-    #     break
-=======
-        'eps': 0.5,
-        'alpha': 1, 
-        'iteration': 1000
-    }
-    get_adv_dataset("mnist", "fgsm_i", fgsm_params, adv_num=200, device=None)
-    adv_dataset = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv.pt")
-    data_iter = DataLoader(adv_dataset, batch_size=1)
-    for x,y in data_iter:
-        print(x.shape)
-        print(y.shape)
-        break
->>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
+    pass
 
     # original_image_path = "./pics/cropped_panda.jpg"
     # ToTensor_transform = transforms.Compose([transforms.Resize((224, 224)),

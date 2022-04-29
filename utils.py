@@ -676,7 +676,6 @@ def test_defence(dataset_name, device=None, attack_name='fgsm'):
             break
 
 
-<<<<<<< HEAD
 def show_images_ae_minst(decode_images, x_test):
     """
     plot the images.
@@ -724,7 +723,7 @@ def show_images_ae_cifar10(decode_images, x_test):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.show()
-=======
+
 def get_test_denfence_dataset(attack_method, dataset_name=None, attack_params=None, val_data_num=100):
     # if dataset_name == "mnist":
     #     dataset = torchvision.datasets.MNIST(
@@ -745,47 +744,6 @@ def get_test_denfence_dataset(attack_method, dataset_name=None, attack_params=No
     attack_method("helo", attack_params)
 
 
-def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=200, device=None):
-    dataset_org = MyDataset((adv_num, 1, 28, 28))
-    dataset_adv = MyDataset((adv_num, 1, 28, 28))
-    if attack_dataset_name == "mnist":
-        train_data = torchvision.datasets.MNIST(
-            root='./data',
-            train=True,
-            transform=transforms.ToTensor(),
-            download=True
-        )
-        # device = ksd.try_gpu()
-        net = clfs.Classifer_MNIST()
-        net.load_exist()
-        net.to(device)
-    # 200
-    data_iter = data.DataLoader(train_data, batch_size=1)
-    gen_adv_num = 0
-    if attack_method == "fgsm_i":
-        for X, y in data_iter:
-            X, y = X.to(device), y.to(device)
-            X_adv, y_adv = am.fgsm_i(net, X, y, eps=attack_params['eps'], alpha=attack_params['alpha'],
-                                  iteration=attack_params['iteration'], device=device)
-            if y_adv != y:
-                dataset_org.update_data(gen_adv_num, (X.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
-                dataset_adv.update_data(gen_adv_num,
-                                        (X_adv.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
-                gen_adv_num += 1
-                print(gen_adv_num)
-
-            if gen_adv_num == adv_num:
-                break
-        torch.save(dataset_adv, "./data/validation_data/validation_data_mnist_fgsm_adv_eps_05.pt")
-        torch.save(dataset_org, "./data/validation_data/validation_data_mnist_fgsm_org_eps_05.pt")
-
-
-def test(helloworld, tuple_paras):
-    print(helloworld)
-    for _ in tuple_paras:
-        print(_)
-
->>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
 
 def where(cond, x, y):
     """
@@ -795,10 +753,8 @@ def where(cond, x, y):
     cond = cond.float()
     return (cond*x) + ((1-cond)*y)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
+
 argmax = lambda x, *args, **kwargs: x.argmax(*args, **kwargs)
 astype = lambda x, *args, **kwargs: x.type(*args, **kwargs)
 reduce_sum = lambda x, *args, **kwargs: x.sum(*args, **kwargs)
