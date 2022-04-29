@@ -1,18 +1,12 @@
 import torch
-import torchvision
 from torch import nn
 from torch.utils import data
-from torchvision import transforms
 import numpy as np
 import time
 import sys
 from PIL import Image
-import torch.nn.functional as F
-import classifiers as clfs
-import autoencoders as aes
-import attack_method as am
+from core import classifiers as clfs, autoencoders as aes, attack_method as am
 import deployed_defensive_model as ddm
-from torch.utils.data import random_split
 
 ksd = sys.modules[__name__]
 
@@ -87,69 +81,6 @@ def accuracy(y_hat, y):
     return float(ksd.reduce_sum(ksd.astype(cmp, y.dtype)))
 
 
-
-
-
-def load_data_cifar_100(batch_size, resize=None):
-    """下载CIFAR100数据集，然后将其加载到内存中
-    Defined in :numref:`sec_fashion_mnist`"""
-    trans = [transforms.ToTensor()]
-    if resize:
-        trans.insert(0, transforms.Resize(resize))
-    trans = transforms.Compose(trans)
-    cifar_train = torchvision.datasets.CIFAR100(
-        root="../data", train=True, transform=trans, download=True)
-    cifar_test = torchvision.datasets.CIFAR100(
-        root="../data", train=False, transform=trans, download=True)
-    return (data.DataLoader(cifar_train, batch_size, shuffle=True,
-                            num_workers=get_dataloader_workers()),
-            data.DataLoader(cifar_test, batch_size, shuffle=False,
-                            num_workers=get_dataloader_workers()))
-
-
-def load_data_cifar_10(batch_size, resize=None):
-    """下载CIFAR100数据集，然后将其加载到内存中
-    Defined in :numref:`sec_fashion_mnist`"""
-    trans = [transforms.ToTensor()]
-    if resize:
-        trans.insert(0, transforms.Resize(resize))
-    trans = transforms.Compose(trans)
-    cifar_train = torchvision.datasets.CIFAR10(
-        root="../data", train=True, transform=trans, download=True)
-    cifar_test = torchvision.datasets.CIFAR10(
-        root="../data", train=False, transform=trans, download=True)
-    return (data.DataLoader(cifar_train, batch_size, shuffle=True,
-                            num_workers=get_dataloader_workers()),
-            data.DataLoader(cifar_test, batch_size, shuffle=False,
-                            num_workers=get_dataloader_workers()))
-
-
-def load_data_mnist(batch_size, resize=None):
-    """下载mnist数据集，然后将其加载到内存中
-    Defined in :numref:`sec_fashion_mnist`"""
-    trans = [transforms.ToTensor()]
-    if resize:
-        trans.insert(0, transforms.Resize(resize))
-    trans = transforms.Compose(trans)
-    mnist_train = torchvision.datasets.MNIST(
-        root="../data", train=True, transform=trans, download=True)
-    mnist_test = torchvision.datasets.MNIST(
-        root="../data", train=False, transform=trans, download=True)
-    return (data.DataLoader(mnist_train, batch_size, shuffle=True,
-                            num_workers=get_dataloader_workers()),
-            data.DataLoader(mnist_test, batch_size, shuffle=False,
-                            num_workers=get_dataloader_workers()))
-
-
-def load_data_mnist_test(batch_size):
-    trans = transforms.Compose([transforms.ToTensor()])
-    mnist_test = torchvision.datasets.MNIST(
-        root="../data", train=False, transform=trans, download=True)
-
-    return data.DataLoader(mnist_test, batch_size, shuffle=False,
-                           num_workers=get_dataloader_workers())
-
-
 def evaluate_accuracy_gpu(net, data_iter, device=None):
     """
     使用device计算精度
@@ -171,7 +102,8 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
             metric.add(ksd.accuracy(net(X), y), ksd.size(y))
     return metric[0] / metric[1]
 
-def evaluate_accuracy_with_ae_gpu(net, ae,data_iter, device=None):
+
+def evaluate_accuracy_with_ae_gpu(net, ae, data_iter, device=None):
     """
     使用device计算精度
     :param net:
@@ -268,7 +200,8 @@ def train_classifier_and_save(net, train_iter, test_iter, num_epochs, lr, device
     if model_name != "none":
         torch.save(net.state_dict(), model_name)
 
-def train_classifier_by_autoencoder_and_save(net, ae,train_iter, test_iter, num_epochs, lr, device, model_name='none'):
+
+def train_classifier_by_autoencoder_and_save(net, ae, train_iter, test_iter, num_epochs, lr, device, model_name='none'):
     """
     使用device 来训练模型
     :param net: 需要训练的网络
@@ -326,7 +259,7 @@ def train_classifier_by_autoencoder_and_save(net, ae,train_iter, test_iter, num_
             train_acc = metric[1] / metric[2]
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
                 print(f'loss {train_l:.7f}, train acc {(train_acc * 100):>0.2f}%')
-        test_acc = evaluate_accuracy_with_ae_gpu(net, ae,test_iter)
+        test_acc = evaluate_accuracy_with_ae_gpu(net, ae, test_iter)
         print(f'test acc {(100 * test_acc):>.2f}%\n')
     print(f'loss {train_l:.3f}, train acc {train_acc:.3f}, '
           f'test acc {test_acc:.3f}')
@@ -599,8 +532,9 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
             thr, indices = torch.topk(jsd_tensor, 200, dim=0)
             print(thr)
 
+
 def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
-    if dataset_name== "mnist":
+    if dataset_name == "mnist":
         autoencoder = aes.ConvAutoEncoderMNIST()
         autoencoder.load_exist()
         autoencoder.to(device)
@@ -610,7 +544,7 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
             dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(i))
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             l2_distance = []
-            for X,_ in data_iter_adv:
+            for X, _ in data_iter_adv:
                 X = ksd.astype(X, torch.float32).to(device)
                 X_rec = autoencoder(X)
                 for x, x_rec in zip(X, X_rec):
@@ -631,10 +565,8 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
             thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
             print(thr)
 
-
             # dataset_org = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
             # data_iter_org = data.DataLoader(dataset_adv, batch_size=200)
-
 
 
 def test_defence(dataset_name, device=None, attack_name='fgsm'):
@@ -687,7 +619,7 @@ def show_images_ae_minst(decode_images, x_test):
     n = 10
     plt.figure(figsize=(20, 4))
     for i in range(n):
-        ax = plt.subplot(2, n, i+1)
+        ax = plt.subplot(2, n, i + 1)
         ax.imshow(x_test[i].reshape(28, 28, 1))
         plt.gray()
         ax.get_xaxis().set_visible(False)
@@ -711,7 +643,7 @@ def show_images_ae_cifar10(decode_images, x_test):
     n = 10
     plt.figure(figsize=(20, 4))
     for i in range(n):
-        ax = plt.subplot(2, n, i+1)
+        ax = plt.subplot(2, n, i + 1)
         x_test_show = x_test[i].transpose(1, 0).transpose(2, 1)
         ax.imshow(x_test_show)
         plt.gray()
@@ -723,6 +655,7 @@ def show_images_ae_cifar10(decode_images, x_test):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.show()
+
 
 def get_test_denfence_dataset(attack_method, dataset_name=None, attack_params=None, val_data_num=100):
     # if dataset_name == "mnist":
@@ -744,15 +677,13 @@ def get_test_denfence_dataset(attack_method, dataset_name=None, attack_params=No
     attack_method("helo", attack_params)
 
 
-
 def where(cond, x, y):
     """
     code from :
         https://discuss.pytorch.org/t/how-can-i-do-the-operation-the-same-as-np-where/1329/8
     """
     cond = cond.float()
-    return (cond*x) + ((1-cond)*y)
-
+    return (cond * x) + ((1 - cond) * y)
 
 
 argmax = lambda x, *args, **kwargs: x.argmax(*args, **kwargs)
