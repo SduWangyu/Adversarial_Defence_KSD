@@ -1,6 +1,4 @@
 from torch import nn
-
-from utils import evaluate
 from utils.utils import *
 
 

@@ -1,3 +1,5 @@
+from torch import nn
+
 from utils.utils import *
 
 
