@@ -225,6 +225,7 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
     return torch.Tensor(o_bestattack)
 
 
+<<<<<<< HEAD
 class MyDataset(data.Dataset):
     def __init__(self, data_size):
         super(MyDataset, self).__init__()
@@ -276,10 +277,17 @@ def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=2
                 break
         torch.save(dataset_adv, "./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(int(attack_params['eps']*10)))
         torch.save(dataset_org, "./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(int(attack_params['eps']*10)))
+=======
+
+
+
+
+>>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
 
 
 if __name__ == "__main__":
     fgsm_params = {
+<<<<<<< HEAD
         'eps': 0.2,
         'alpha': 1,
         'iteration': 1000
@@ -291,6 +299,19 @@ if __name__ == "__main__":
     #     print(x.shape)
     #     print(y.shape)
     #     break
+=======
+        'eps': 0.5,
+        'alpha': 1, 
+        'iteration': 1000
+    }
+    get_adv_dataset("mnist", "fgsm_i", fgsm_params, adv_num=200, device=None)
+    adv_dataset = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv.pt")
+    data_iter = DataLoader(adv_dataset, batch_size=1)
+    for x,y in data_iter:
+        print(x.shape)
+        print(y.shape)
+        break
+>>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
 
     # original_image_path = "./pics/cropped_panda.jpg"
     # ToTensor_transform = transforms.Compose([transforms.Resize((224, 224)),

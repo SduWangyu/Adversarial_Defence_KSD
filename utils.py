@@ -12,6 +12,7 @@ import classifiers as clfs
 import autoencoders as aes
 import attack_method as am
 import deployed_defensive_model as ddm
+from torch.utils.data import random_split
 
 ksd = sys.modules[__name__]
 
@@ -86,10 +87,7 @@ def accuracy(y_hat, y):
     return float(ksd.reduce_sum(ksd.astype(cmp, y.dtype)))
 
 
-def get_dataloader_workers():
-    """使用4个进程来读取数据
-    Defined in :numref:`sec_fashion_mnist`"""
-    return 4
+
 
 
 def load_data_cifar_100(batch_size, resize=None):
@@ -171,6 +169,29 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
             X = X.to(device)
             y = y.to(device)
             metric.add(ksd.accuracy(net(X), y), ksd.size(y))
+    return metric[0] / metric[1]
+
+def evaluate_accuracy_with_ae_gpu(net, ae,data_iter, device=None):
+    """
+    使用device计算精度
+    :param net:
+    :param data_iter:
+    :param device:
+    :return:
+    """
+    if isinstance(net, nn.Module):
+        net.eval()  # 设置为评估模式
+        if not device:
+            device = next(iter(net.parameters())).device
+    # 正确预测的数量，总预测的数量
+    metric = ksd.Accumulator(2)
+    with torch.no_grad():
+        for X, y in data_iter:
+            X = X.to(device)
+            X_rec = ae(X)
+            y = y.to(device)
+            metric.add(ksd.accuracy(net(X), y), ksd.size(y))
+            metric.add(ksd.accuracy(net(X_rec), y), ksd.size(y))
     return metric[0] / metric[1]
 
 
@@ -305,7 +326,7 @@ def train_classifier_by_autoencoder_and_save(net, ae,train_iter, test_iter, num_
             train_acc = metric[1] / metric[2]
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
                 print(f'loss {train_l:.7f}, train acc {(train_acc * 100):>0.2f}%')
-        test_acc = evaluate_accuracy_gpu(net, test_iter)
+        test_acc = evaluate_accuracy_with_ae_gpu(net, ae,test_iter)
         print(f'test acc {(100 * test_acc):>.2f}%\n')
     print(f'loss {train_l:.3f}, train acc {train_acc:.3f}, '
           f'test acc {test_acc:.3f}')
@@ -548,48 +569,77 @@ def jenson_shannon_divergence(net_1_logits, net_2_logits):
     return (0.5 * ksd.reduce_sum(loss, 1))
 
 
-def get_thread_hold(dataset, classifier_name, autoencoder_name, drop_rate=0.01, device=try_gpu()) -> torch.Tensor:
-    """
-    通过dataset来获取拒绝的thread_hold，drop_rate是可能的误报率
-    :param classifier: 分类器
-    :param autoencoder: 用的autoencoder
-    :param dataset: 用于那个的dataset
-    :param drop_rate: 误报率
-    :return:
-    MNIST 2.5337
-    """
-    classsifier_file_path = './models/classifiers/'
-    pth = '.pth'
-    autoencoder_file_path = './models/autoencoders/'
-    dataloader = data.DataLoader(dataset, batch_size=128)
-    th_idx = int(drop_rate * len(dataset))
-    if classifier_name == 'classifier_mnist':
-        clf = clfs.Classifer_MNIST()
-        clf.load_state_dict(torch.load(classsifier_file_path + classifier_name + pth))
-        clf.eval().to(device)
+def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
+    if dataset_name == "mnist":
+        autoencoder = aes.ConvAutoEncoderMNIST()
+        autoencoder.load_exist()
+        autoencoder.to(device)
+        classifier = clfs.ClassiferMNIST()
+        classifier.load_exist()
+        classifier.to(device)
+        for i in range(1, 6):
+            print(i)
+            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(i))
+            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
+            for X, _ in data_iter_adv:
+                X = ksd.astype(X, torch.float32).to(device)
+                X_rec = autoencoder(X)
+                jsd_tensor = jenson_shannon_divergence(classifier(X), classifier(X_rec))
 
-    if autoencoder_name == 'conv_autoencoder_mnist':
-        ae = aes.ConvAutoEncoder(encoded_space_dim=10, fc2_input_dim=128)
-        ae.load_state_dict(torch.load(autoencoder_file_path + autoencoder_name + pth))
-        ae.eval().to(device)
+            thr, indices = torch.topk(jsd_tensor, 200, dim=0)
+            print(thr)
 
-    jsd_tensor = torch.Tensor().to(device)
-    with torch.no_grad():
-        for X, y in dataloader:
-            X = X.to(device)
-            org_pre = clf(X)  # 原本的概率
-            rec_pre = clf(ae(X))  # 通过ae后的概率
-            jsd = jenson_shannon_divergence(org_pre, rec_pre)
-            jsd_tensor = torch.cat((jsd_tensor, jsd), 0)
+            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
+            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
+            for X, _ in data_iter_adv:
+                X = ksd.astype(X, torch.float32).to(device)
+                X_rec = autoencoder(X)
+                jsd_tensor = jenson_shannon_divergence(classifier(X), classifier(X_rec))
 
-    thr, indices = torch.topk(jsd_tensor, th_idx, dim=0)
-    print(thr)
-    return thr[-1]
+            thr, indices = torch.topk(jsd_tensor, 200, dim=0)
+            print(thr)
+
+def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
+    if dataset_name== "mnist":
+        autoencoder = aes.ConvAutoEncoderMNIST()
+        autoencoder.load_exist()
+        autoencoder.to(device)
+        for i in range(1, 6):
+            print(i)
+            print()
+            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(i))
+            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
+            l2_distance = []
+            for X,_ in data_iter_adv:
+                X = ksd.astype(X, torch.float32).to(device)
+                X_rec = autoencoder(X)
+                for x, x_rec in zip(X, X_rec):
+                    l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
+            l2_distance_tensor = torch.Tensor(l2_distance)
+            thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
+            print(thr)
+
+            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
+            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
+            l2_distance = []
+            for X, _ in data_iter_adv:
+                X = ksd.astype(X, torch.float32).to(device)
+                X_rec = autoencoder(X)
+                for x, x_rec in zip(X, X_rec):
+                    l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
+            l2_distance_tensor = torch.Tensor(l2_distance)
+            thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
+            print(thr)
+
+
+            # dataset_org = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
+            # data_iter_org = data.DataLoader(dataset_adv, batch_size=200)
+
 
 
 def test_defence(dataset_name, device=None, attack_name='fgsm'):
     if dataset_name == 'mnist':
-        net = ddm.Defence_MNIST()
+        net = ddm.DefenceMNIST()
         net.to(device)
         net.eval()
         test_num = 100
@@ -626,6 +676,7 @@ def test_defence(dataset_name, device=None, attack_name='fgsm'):
             break
 
 
+<<<<<<< HEAD
 def show_images_ae_minst(decode_images, x_test):
     """
     plot the images.
@@ -673,6 +724,68 @@ def show_images_ae_cifar10(decode_images, x_test):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.show()
+=======
+def get_test_denfence_dataset(attack_method, dataset_name=None, attack_params=None, val_data_num=100):
+    # if dataset_name == "mnist":
+    #     dataset = torchvision.datasets.MNIST(
+    #         root="./data",
+    #         transform=transforms.ToTensor(),
+    #         train=True
+    #     )
+    #     val_data, _ = random_split(dataset, [val_data_num*2, len(dataset)-val_data_num*2])
+    #
+    # if attack_method == "fgsm":
+    #     pass
+    #
+    # # for X, y in val_data:
+    # #
+    # torch.save(val_data, "./data/validation_data/validation_data_mnist.pt")
+    # attack_method("helloworld", attack_params)
+    # dataset = torch.load("./data/validation_data/validation_data_mnist.pt")
+    attack_method("helo", attack_params)
+
+
+def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=200, device=None):
+    dataset_org = MyDataset((adv_num, 1, 28, 28))
+    dataset_adv = MyDataset((adv_num, 1, 28, 28))
+    if attack_dataset_name == "mnist":
+        train_data = torchvision.datasets.MNIST(
+            root='./data',
+            train=True,
+            transform=transforms.ToTensor(),
+            download=True
+        )
+        # device = ksd.try_gpu()
+        net = clfs.Classifer_MNIST()
+        net.load_exist()
+        net.to(device)
+    # 200
+    data_iter = data.DataLoader(train_data, batch_size=1)
+    gen_adv_num = 0
+    if attack_method == "fgsm_i":
+        for X, y in data_iter:
+            X, y = X.to(device), y.to(device)
+            X_adv, y_adv = am.fgsm_i(net, X, y, eps=attack_params['eps'], alpha=attack_params['alpha'],
+                                  iteration=attack_params['iteration'], device=device)
+            if y_adv != y:
+                dataset_org.update_data(gen_adv_num, (X.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
+                dataset_adv.update_data(gen_adv_num,
+                                        (X_adv.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
+                gen_adv_num += 1
+                print(gen_adv_num)
+
+            if gen_adv_num == adv_num:
+                break
+        torch.save(dataset_adv, "./data/validation_data/validation_data_mnist_fgsm_adv_eps_05.pt")
+        torch.save(dataset_org, "./data/validation_data/validation_data_mnist_fgsm_org_eps_05.pt")
+
+
+def test(helloworld, tuple_paras):
+    print(helloworld)
+    for _ in tuple_paras:
+        print(_)
+
+>>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
 
 def where(cond, x, y):
     """
@@ -682,6 +795,10 @@ def where(cond, x, y):
     cond = cond.float()
     return (cond*x) + ((1-cond)*y)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0259dda57d828f00054a553319cc87cf7ceed163
 argmax = lambda x, *args, **kwargs: x.argmax(*args, **kwargs)
 astype = lambda x, *args, **kwargs: x.type(*args, **kwargs)
 reduce_sum = lambda x, *args, **kwargs: x.sum(*args, **kwargs)
@@ -691,8 +808,11 @@ if __name__ == '__main__':
     # logit_1 = torch.Tensor([[1, 3], [1, 1]])
     # logit_2 = torch.Tensor([[1, 2], [1, 1]])
     # print(jenson_shannon_divergence(logit_1, logit_2))
-    test_defence('mnist', device=try_gpu())
+    # test_defence('mnist', device=try_gpu())
     # print("hello_world")
+    # get_test_denfence_dataset(test, attack_params=(1, 2))
+    # get_thread_hold_by_distance("mnist", drop_rate=0.01, device=ksd.try_gpu())
+    get_thread_hold_by_prodiv("mnist", drop_rate=0.01, device=ksd.try_gpu())
     # torch.cuda.empty_cache()
     # test_defence('mnist', try_gpu())
     # dataset = torchvision.datasets.MNIST(
