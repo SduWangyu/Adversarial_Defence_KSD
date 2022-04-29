@@ -2,9 +2,9 @@ import torch
 from torch import nn
 
 
-class Classifer_MNIST(nn.Module):
+class ClassiferMNIST(nn.Module):
     def __init__(self, num_class: int = 10) -> None:
-        super(Classifer_MNIST, self).__init__()
+        super(ClassiferMNIST, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3),
             nn.ReLU(inplace=True),
@@ -32,10 +32,15 @@ class Classifer_MNIST(nn.Module):
         x = self.classifier(x)
         return x
 
+    def load_exist(self, path="./models/classifiers/classifier_mnist.pth", is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
 
-class Classifer_CIFAR10(nn.Module):
+
+class ClassiferCIFAR10(nn.Module):
     def __init__(self, num_class: int = 10) -> None:
-        super(Classifer_CIFAR10, self).__init__()
+        super(ClassiferCIFAR10, self).__init__()
         self.features = nn.Sequential(
             # 这里，我们使用一个11*11的更大窗口来捕捉对象。
             # 同时，步幅为4，以减少输出的高度和宽度。
@@ -64,4 +69,9 @@ class Classifer_CIFAR10(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
         return x
+
+    def load_exist(self, path="./models/classifiers/classifier_cifar10.pth", is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
 

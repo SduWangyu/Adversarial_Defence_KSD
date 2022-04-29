@@ -2,9 +2,9 @@ from torch import nn
 import torch
 
 
-class AutoEncoder_MNIST(nn.Module):
+class AutoEncoderMNIST(nn.Module):
     def __init__(self):
-        super(AutoEncoder_MNIST, self).__init__()
+        super(AutoEncoderMNIST, self).__init__()
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(784, 512),
@@ -27,9 +27,10 @@ class AutoEncoder_MNIST(nn.Module):
         return output
 
 
-class Denoise_AutoEncoder_MNIST(nn.Module):
+
+class DenoiseAutoEncoderMNIST(nn.Module):
     def __init__(self):
-        super(Denoise_AutoEncoder_MNIST, self).__init__()
+        super(DenoiseAutoEncoderMNIST, self).__init__()
         self.flatten = nn.Flatten()
         self.autocode = nn.Sequential(
             nn.Linear(784, 512),
@@ -56,9 +57,9 @@ class Denoise_AutoEncoder_MNIST(nn.Module):
         return output
 
 
-class ConvAutoEncoder(nn.Module):
+class ConvAutoEncoderMNIST(nn.Module):
     def __init__(self, encoded_space_dim=10, fc2_input_dim=128):
-        super(ConvAutoEncoder, self).__init__()
+        super(ConvAutoEncoderMNIST, self).__init__()
         # Convolutional section
         self.encoder_cnn = nn.Sequential(
             nn.Conv2d(1, 8, kernel_size=(3, 3), stride=2, padding=1),
@@ -107,6 +108,11 @@ class ConvAutoEncoder(nn.Module):
         x = self.unflatten(x)
         x = self.decoder_conv(x)
         return x
+
+    def load_exist(self, path="./models/autoencoders/conv_autoencoder_mnist.pth", is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
 
 
 
