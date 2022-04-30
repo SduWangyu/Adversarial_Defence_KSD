@@ -1,10 +1,7 @@
 from torch import nn
-from utils.misc import *
-from torch.optim import lr_scheduler
-
-
-
-
+import torch
+from utils.misc import Timer, Accumulator
+import utils.evaluate as evaluate
 def init_weights(m):
     if type(m) == nn.Linear or type(m) == nn.Conv2d:
         nn.init.xavier_uniform_(m.weight)

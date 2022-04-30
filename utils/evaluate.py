@@ -1,6 +1,6 @@
 from torch import nn
-
-from utils.misc import *
+import torch
+from utils.misc import Accumulator, Timer
 
 
 def accuracy(y_hat, y):
@@ -14,8 +14,8 @@ def accuracy(y_hat, y):
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = y_hat.argmax(axis=1)
     # 按位运算，获取正确的个数
-    cmp = y_hat.astype(y.dtype) == y
-    return float(cmp.astype(y.dtype).reduce_sum())
+    cmp = y_hat.type(y.dtype) == y
+    return float(cmp.type(y.dtype).sum())
 
 
 def accuracy_gpu(net, data_iter, ae=None, device=None):
@@ -76,4 +76,4 @@ def jenson_shannon_divergence(net_1_logit, net_2_logit):
     loss = 0.0
     loss += F.kl_div(F.log_softmax(net_1_logit, dim=1), total_m, reduction="none")
     loss += F.kl_div(F.log_softmax(net_2_logit, dim=1), total_m, reduction="none")
-    return 0.5 * loss.reduce_sum(1)
+    return 0.5 * loss.sum(dim=1)

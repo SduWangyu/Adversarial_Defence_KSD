@@ -213,3 +213,5 @@ class ResAutoEncoderCIFAR10(nn.Module):
         out_conv = self.decode_out_conv(rb6)
         output = self.decode_tanh(out_conv)
         return output
+
+

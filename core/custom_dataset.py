@@ -101,6 +101,15 @@ def load_data(name, batch_size, val_type=0, val_account=0.1):
 
 
 def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=200, device=None):
+    """
+    获取验证的对抗样本-原始数据的数据集
+    :param attack_dataset_name:
+    :param attack_method:
+    :param attack_params:
+    :param adv_num:
+    :param device:
+    :return:
+    """
     if attack_dataset_name == "mnist":
         dataset_shape = (adv_num, 1, 28, 28)
         net_type = clfs.ClassiferMNIST
@@ -151,3 +160,11 @@ def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=2
                f"./data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_adv_{param_name}_{attack_params[param_name] * 10}.pt")
     torch.save(dataset_org,
                f"./data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_org_{param_name}_{attack_params[param_name] * 10}.pt")
+
+
+def add_noise(train_data, test_data):
+    train_data_noisy = train_data + NOISE_FACTOR * np.random.normal(loc=0.0, scale=1.0, size=train_data.shape)
+    test_data_noisy = test_data + NOISE_FACTOR * np.random.normal(loc=0.0, scale=1.0, size=test_data.shape)
+    train_data_noisy = np.clip(train_data_noisy, 0., 1.).to(torch.float32)
+    test_data_noisy = np.clip(test_data_noisy, 0., 1.).to(torch.float32)
+    return train_data_noisy, test_data_noisy
