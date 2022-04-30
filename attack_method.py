@@ -1,15 +1,10 @@
 import torch
 from torch.autograd import Variable
 import numpy as np
-from torch.utils.data import DataLoader
 import torch.utils.data.dataset
-import utils as ksd
 from torch import nn
-import utils as ksd
-import torchvision
-from torchvision import transforms
-import classifiers as clfs
-from torch.utils import data
+import utils
+from custom_dataset import load_data
 
 
 def get_adv_img_tensor(img_teonsor, device=None):
@@ -17,23 +12,13 @@ def get_adv_img_tensor(img_teonsor, device=None):
     return adv_image_tensor
 
 
-def copy_tensor(original_tensor, device=None, re_grad=True):
-    if device is None:
-        return_tensor = Variable(original_tensor.clone().detach().to(original_tensor.device.type),
-                                 requires_grad=re_grad)
-    else:
-        return_tensor = Variable(original_tensor.clone().detach().to(device),
-                                 requires_grad=re_grad)
-    return return_tensor
-
-
 def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
            x_val_min=-1, x_val_max=1, device=None):
-    x_adv = copy_tensor(x_input, device, True)
+    x_adv = Variable(utils.copy_tensor(x_input).to(device), requires_grad=True)
     loss_fn = nn.CrossEntropyLoss()
     for i in range(iteration):
         h_adv = net(x_adv)
-        adv_label = ksd.argmax(h_adv, 1)
+        adv_label = utils.argmax(h_adv, 1)
         if target:
             loss = loss_fn(h_adv, y_input)
             if adv_label == y_input:
@@ -49,90 +34,78 @@ def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
 
         x_adv.grad.sign_()
         x_adv = x_adv - alpha * x_adv.grad
-        x_adv = ksd.where(x_adv > x_input + eps, x_input + eps, x_adv)
-        x_adv = ksd.where(x_adv < x_input - eps, x_input - eps, x_adv)
+        x_adv = utils.where(x_adv > x_input + eps, x_input + eps, x_adv)
+        x_adv = utils.where(x_adv < x_input - eps, x_input - eps, x_adv)
         x_adv = torch.clamp(x_adv, x_val_min, x_val_max)
         x_adv = Variable(x_adv.data, requires_grad=True)
-    adv_label = ksd.argmax(h_adv, 1)
+    adv_label = utils.argmax(h_adv, 1)
     return x_adv, adv_label
 
 
-def deepfool_untarget(model, img_tensor, original_label, max_iterations=100,
-                      num_classes=1000, overshoot=0.02, device=None):
-    adv_img_tensor = get_adv_img_tensor(img_tensor)
-    input_shape = adv_img_tensor.cpu().detach().numpy().shape
-    w = np.zeros(input_shape)
-    r_tot = np.zeros(input_shape)
-    output = model(adv_img_tensor)
-    for epoch in range(max_iterations):
-        scores = model(adv_img_tensor).data.cpu().numpy()[0]
-        adv_label = np.argmax(scores)
-        print("epoch={} label={} score={}".format(epoch, adv_label, scores[label]))
-        # 如果无定向攻击成功
-        if adv_label != original_label:
-            return adv_img_tensor
-        pert = np.inf
-        output[0, original_label].backward(retain_graph=True)
-        grad_orig = adv_img_tensor.grad.data.cpu().numpy().copy()
-        for k in range(1, num_classes):
-            if k == original_label:
-                continue
-            # 梯度清零
-            adv_img_tensor.grad.zero_()
-            output[0, k].backward(retain_graph=True)
-            cur_grad = adv_img_tensor.grad.data.cpu().numpy().copy()
-
-            # set new w_k and new f_k
-            w_k = cur_grad - grad_orig
-            f_k = (output[0, k] - output[0, original_label]).data.cpu().numpy()
-
-            pert_k = abs(f_k) / np.linalg.norm(w_k.flatten())
-
-            # 选择pert最小值
-            if pert_k < pert:
-                pert = pert_k
-                w = w_k
-        # 计算 r_i 和 r_tot
-        r_i = (pert + 1e-8) * w / np.linalg.norm(w)
-        r_tot = np.float32(r_tot + r_i)
-        adv_img_tensor.data = adv_img_tensor.data + (1 + overshoot) * torch.from_numpy(r_tot).to(device)
-
-
-def deepfool_target(model, img_tensor, target_label,
-                    max_iterations=100, overshoot=0.02):
-    adv_img_tensor = get_adv_img_tensor(img_tensor)
-    for param in model.parameters():
+def deepfool(net, x_input, y_input, target_label=None, max_iterations=100, num_labels=10, overshoot=0.02, device=None):
+    x_adv = Variable(utils.copy_tensor(x_input).to(device), requires_grad=True)
+    for param in net.parameters():
         param.requires_grad = False
-    input_shape = adv_img_tensor.cpu().detach().numpy().shape
-    target = Variable(torch.Tensor([float(target_label)]).to(device).long())
-    r_tot = np.zeros(input_shape)
-    loss_func = torch.nn.CrossEntropyLoss()
-    output = model(adv_img_tensor)
-    output[0, target].backward(retain_graph=True)
-    for epoch in range(max_iterations):
-        output = model(adv_img_tensor)
-        label = np.argmax(output.data.cpu().numpy())
-        loss = loss_func(output, target)
-        # print("epoch={} label={} loss={}".format(epoch, label, loss))
-        # 如果定向攻击成功
-        if label == target_label:
-            return adv_img_tensor
-        # 梯度清零
-        adv_img_tensor.grad.zero_()
-        output[0, target_label].backward(retain_graph=True)
-        w = adv_img_tensor.grad.data.cpu().numpy().copy()
-        f = output[0, target_label].data.cpu().numpy()
-        pert = abs(f) / np.linalg.norm(w.flatten())
-        # 计算 r_i 和 r_tot
-        r_i = (pert + 1e-8) * w / np.linalg.norm(w)
-        r_tot = np.float32(r_tot + r_i)
-        adv_img_tensor.data = adv_img_tensor.data + (1 + overshoot) * torch.Tensor(r_tot).to(device)
+    input_shape = x_adv.shape
+    w = torch.zeros(input_shape)
+    w_norm = torch.inf
+    pert = torch.inf
+    if target_label:
+        for epoch in range(max_iterations):
+            h_adv = net(x_adv)
+            adv_label = utils.argmax(h_adv, 1)
+            print(f'epoch: {epoch}, label:{adv_label}, score:{h_adv[0, adv_label]}')
+            if adv_label == target_label:
+                return x_adv, adv_label
+            h_adv[0, y_input].backward(retain_graph=True)
+            org_label_grad = utils.copy_tensor(x_adv.grad).to(device)
+            x_adv.grad.zero_()
+            h_adv[0, target_label].backward(retain_graph=True)
+            w = x_adv.grad - org_label_grad
+            f = h_adv[0, y_input] - h_adv[0, target_label]
+            # + 1e-8是为了保证结果不为0
+            w_norm = torch.norm(w.flatten()) + 1e-8
+            pert = (abs(f) + 1e-8) / w_norm
+            r_i = pert * w / w_norm
+            x_adv.data = x_adv.data + (1 + overshoot) * r_i
+    else:
+        for epoch in range(max_iterations):
+            h_adv = net(x_adv)
+            adv_label = utils.argmax(h_adv, 1)
+            # print(h_adv[0, y_input])
+            # print(f'epoch: {epoch}, label:{adv_label}, score:{h_adv[0, adv_label]}')
+            if adv_label != y_input:
+                print("success")
+                return x_adv, adv_label
+            h_adv[0, y_input].backward(retain_graph=True)
+            org_label_grad = utils.copy_tensor(x_adv.grad.data).to(device)
+            for k in range(0, num_labels):
+                if k == y_input:
+                    continue
+                # 梯度清零
+                x_adv.grad.zero_()
+                h_adv[0, k].backward(retain_graph=True)
+                w_k = x_adv.grad.data - org_label_grad.data
+                f_k = h_adv[0, k] - h_adv[0, y_input]
+                # + 1e-8是为了保证结果不为0
+                w_k_norm = torch.norm(w_k.flatten()) + 1e-8
+                pert_k = (abs(f_k) + 1e-8) / w_k_norm
+                # 选择pert最小值
+                if pert_k < pert:
+                    pert = pert_k
+                    w = w_k
+                    w_norm = w_k_norm
+            r_i = pert * w / w_norm
+            x_adv.data = x_adv.data + (1 + overshoot) * r_i
+
+    print("faild")
+    return x_adv, adv_label
 
 
-def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search_steps=10,
-       confidence=1e2, k=40, box_area=(-3.0, 3.0), num_labels=1000, target_label=288, device=None):
+def cw_l2(net, x_input, y_input, max_iterations=1000, learning_rate=0.01, binary_search_steps=10,
+          confidence=1e2, k=0, box_min=-3.0, box_max=3.0, num_labels=10, target_label=None, device=None):
     """
-    cw攻击算法 ，有目标攻击
+    cw攻击算法 l2 ，有目标攻击
     :param model:   攻击的分类器
     :param img_tensor: 输入图像的tensor
     :param max_iterations: 最大迭代次数，论文中设置的是10000次，但是1000次已经可以完成95%的优化工作
@@ -145,30 +118,32 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
     :param num_labels:
     :return: 返回值是最佳攻击图像
     """
+    for param in net.parameters():
+        param.requires_grad = False
 
-    tlab = Variable(torch.from_numpy(np.eye(num_labels)[target_label]).to(device).float())
-    shape = (1, 3, 224, 224)
     # c的初始化边界
     lower_bound = 0
-    c = confidence
     upper_bound = 1e10
 
     # the best l2, score, and image attack
     o_bestl2 = 1e10
     o_bestscore = -1
-    o_bestattack = [np.zeros(shape)]
+    o_bestattack = torch.zeros(x_input.shape).to(device)
 
     # the resulting image, tanh'd to keep bounded from boxmin to boxmax
-    boxmul = (box_area[1] - box_area[0]) / 2.
-    boxplus = sum(box_area) / 2.
+    boxmul = (box_max - box_min) / 2.
+    boxplus = (box_max + box_min) / 2.
+
     # 设置为不保存梯度值 自然也无法修改
-    for param in model.parameters():
-        param.requires_grad = False
+    if target_label:
+        tlb = torch.eye(num_labels)[target_label].float().to(device)
+    else:
+        tlb = torch.eye(num_labels)[y_input].float().to(device)
+
     for outer_step in range(binary_search_steps):
         print("o_bestl2={} confidence={}".format(o_bestl2, confidence))
         # 把原始图像转换成图像数据和扰动的形态
-        timg = Variable(
-            torch.from_numpy(np.arctanh((img_tensor.numpy() - boxplus) / boxmul * 0.999999)).to(device).float())
+        timg = Variable(torch.arctanh((x_input.data - boxplus) / boxmul * 0.999999).to(device).float())
         modifier = Variable(torch.zeros_like(timg).to(device).float())
         # 图像数据的扰动量梯度可以获取
         modifier.requires_grad = True
@@ -178,7 +153,7 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
             optimizer.zero_grad()
             # 定义新输入
             newimg = torch.tanh(modifier + timg) * boxmul + boxplus
-            output = model(newimg)
+            output = net(newimg)
             loss2 = torch.dist(newimg, (torch.tanh(timg) * boxmul + boxplus), p=2)
             """
             # compute the probability of the label class versus the maximum other
@@ -188,52 +163,88 @@ def cw(model, img_tensor, max_iterations=1000, learning_rate=0.01, binary_search
                 loss1 = tf.maximum(0.0, other-real+k)
                 loss1 = tf.reduce_sum(const*loss1)
             """
-            real = torch.max(output * tlab)
-            other = torch.max((1 - tlab) * output)
-            loss1 = other - real + k
+            real = torch.max(output * tlb)
+            other = torch.max((1 - tlb) * output)
+            if target_label:
+                loss1 = other - real + k
+            else:
+                loss1 = -other + real + k
             loss1 = torch.clamp(loss1, min=0)
             loss1 = confidence * loss1
             loss = loss1 + loss2
             loss.backward(retain_graph=True)
             optimizer.step()
             l2 = loss2
-            sc = output.data.cpu().numpy()
+            sc = output.data
             # print out the losses every 10%
+            pred = sc.argmax()
             if iteration % (max_iterations // 10) == 0:
-                print("iteration={} loss={} loss1={} loss2={}".format(iteration, loss, loss1, loss2))
-            if (l2 < o_bestl2) and (np.argmax(sc) == target_label):
-                print("attack success l2={} target_label={}".format(l2, target_label))
-                o_bestl2 = l2
-                o_bestscore = np.argmax(sc)
-                o_bestattack = newimg.data.cpu().numpy()
-        confidence_old = -1
-        if (o_bestscore == target_label) and o_bestscore != -1:
-            # 攻击成功 减小c
-            upper_bound = min(upper_bound, confidence)
-            if upper_bound < 1e9:
-                print()
-                confidence_old = confidence
-                confidence = (lower_bound + upper_bound) / 2
-        else:
-            lower_bound = max(lower_bound, confidence)
-            confidence_old = confidence
-            if upper_bound < 1e9:
-                confidence = (lower_bound + upper_bound) / 2
+                print("iteration={} loss={} loss1={} loss2={} pred={}".format(iteration, loss, loss1, loss2, pred))
+
+            if target_label:
+
+                if (l2 < o_bestl2) and (sc.argmax(axis=1) == target_label):
+                    print("attack success l2={} target_label={}".format(l2, target_label))
+                    o_bestl2 = l2
+                    o_bestscore = sc.argmax(axis=1)
+                    o_bestattack = newimg.data
             else:
-                confidence *= 10
+                if (l2 < o_bestl2) and (pred != y_input):
+                    # print("attack success l2={} target_label={} pro={}".format(l2,target_label,pro))
+                    # print("attack success l2={} label={}".format(l2,pred))
+                    print("attack success l2={} label={}".format(l2, pred))
+                    o_bestl2 = l2
+                    o_bestscore = pred
+                    o_bestattack = newimg.data
+        confidence_old = -1
+        if target_label:
+            if (o_bestscore == target_label) and o_bestscore != -1:
+                # 攻击成功 减小c
+                upper_bound = min(upper_bound, confidence)
+                if upper_bound < 1e9:
+                    print()
+                    confidence_old = confidence
+                    confidence = (lower_bound + upper_bound) / 2
+            else:
+                lower_bound = max(lower_bound, confidence)
+                confidence_old = confidence
+                if upper_bound < 1e9:
+                    confidence = (lower_bound + upper_bound) / 2
+                else:
+                    confidence *= 10
+        else:
+            if (o_bestscore != y_input) and (o_bestscore != -1):
+                # 攻击成功 减小c
+                upper_bound = min(upper_bound, confidence)
+                if upper_bound < 1e9:
+                    confidence_old = confidence
+                    confidence = (lower_bound + upper_bound) / 2
+            else:
+                lower_bound = max(lower_bound, confidence)
+                confidence_old = confidence
+                if upper_bound < 1e9:
+                    confidence = (lower_bound + upper_bound) / 2
+                else:
+                    confidence *= 10
         print("outer_step={} confidence {}->{}".format(outer_step, confidence_old, confidence))
-    return torch.Tensor(o_bestattack)
-
-
-
-
-
-
-
+    return o_bestattack, o_bestscore
 
 
 if __name__ == "__main__":
-    pass
+    import classifiers as clfs
+    from torchvision import transforms
+
+    trans = transforms.Compose([transforms.ToTensor()])
+    data_iter = load_data("mnist", batch_size=1, val_type=2, trans=trans, val_account=0.002)
+
+    device = utils.try_gpu()
+    net = clfs.ClassiferMNIST()
+    net.load_exist()
+    net.to(device)
+    for X, y in data_iter:
+        X, y = X.to(device), y.to(device)
+        X_adv, y_adv = cw_l2(net, X, y, device=device, target_label=(y.data+1)%10)
+        break
 
     # original_image_path = "./pics/cropped_panda.jpg"
     # ToTensor_transform = transforms.Compose([transforms.Resize((224, 224)),

@@ -28,7 +28,7 @@ class CustomDataset(data.Dataset):
         self.y[index] = data_in[1]
 
 
-def load_data(name, batch_size, trans, val_type=0, val_account=0):
+def load_data(name, batch_size, trans, val_type=0, val_account=0.1):
     """
 
     :param name: dataset name

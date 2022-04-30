@@ -7,14 +7,12 @@ import numpy as np
 import time
 import sys
 from PIL import Image
-import torch.nn.functional as F
 import classifiers as clfs
 import autoencoders as aes
 import attack_method as am
 import deployed_defensive_model as ddm
-from torch.utils.data import random_split
 
-ksd = sys.modules[__name__]
+ultis = sys.modules[__name__]
 
 
 class Timer:
@@ -81,13 +79,10 @@ def accuracy(y_hat, y):
     """
     # 如果是二维的数据的话，就按行取最大值的索引
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
-        y_hat = ksd.argmax(y_hat, axis=1)
+        y_hat = ultis.argmax(y_hat, axis=1)
     # 按位运算，获取正确的个数
-    cmp = ksd.astype(y_hat, y.dtype) == y
-    return float(ksd.reduce_sum(ksd.astype(cmp, y.dtype)))
-
-
-
+    cmp = ultis.astype(y_hat, y.dtype) == y
+    return float(ultis.reduce_sum(ultis.astype(cmp, y.dtype)))
 
 
 def load_data_cifar_100(batch_size, resize=None):
@@ -163,12 +158,12 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
         if not device:
             device = next(iter(net.parameters())).device
     # 正确预测的数量，总预测的数量
-    metric = ksd.Accumulator(2)
+    metric = ultis.Accumulator(2)
     with torch.no_grad():
         for X, y in data_iter:
             X = X.to(device)
             y = y.to(device)
-            metric.add(ksd.accuracy(net(X), y), ksd.size(y))
+            metric.add(ultis.accuracy(net(X), y), ultis.size(y))
     return metric[0] / metric[1]
 
 def evaluate_accuracy_with_ae_gpu(net, ae,data_iter, device=None):
@@ -184,14 +179,14 @@ def evaluate_accuracy_with_ae_gpu(net, ae,data_iter, device=None):
         if not device:
             device = next(iter(net.parameters())).device
     # 正确预测的数量，总预测的数量
-    metric = ksd.Accumulator(2)
+    metric = ultis.Accumulator(2)
     with torch.no_grad():
         for X, y in data_iter:
             X = X.to(device)
             X_rec = ae(X)
             y = y.to(device)
-            metric.add(ksd.accuracy(net(X), y), ksd.size(y))
-            metric.add(ksd.accuracy(net(X_rec), y), ksd.size(y))
+            metric.add(ultis.accuracy(net(X), y), ultis.size(y))
+            metric.add(ultis.accuracy(net(X_rec), y), ultis.size(y))
     return metric[0] / metric[1]
 
 
@@ -204,12 +199,12 @@ def evaluate_loss_gpu(net, data_iter, loss_fn, device=None):
             device = next(iter(net.parameters())).device
 
     # loss，总预测的数量
-    metric = ksd.Accumulator(2)
+    metric = ultis.Accumulator(2)
     with torch.no_grad():
         for X, y in data_iter:
             X = X.to(device)
             X_R = net(X)
-            metric.add(X.shape[0] * loss_fn(X_R, X).item(), ksd.size(y))
+            metric.add(X.shape[0] * loss_fn(X_R, X).item(), ultis.size(y))
     return metric[0] / metric[1]
 
 
@@ -237,11 +232,11 @@ def train_classifier_and_save(net, train_iter, test_iter, num_epochs, lr, device
     # 使用随机梯度下降算法
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = nn.CrossEntropyLoss()
-    timer, num_batches = ksd.Timer(), len(train_iter)
+    timer, num_batches = ultis.Timer(), len(train_iter)
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}\n--------------------------------')
         # 训练损失之和，训练准确率之和，样本数
-        metric = ksd.Accumulator(3)
+        metric = ultis.Accumulator(3)
         net.train()
         for i, (X, y) in enumerate(train_iter):
             timer.start()
@@ -253,7 +248,7 @@ def train_classifier_and_save(net, train_iter, test_iter, num_epochs, lr, device
             optimizer.step()
             with torch.no_grad():
                 # pytorch 计算交叉熵的时候会有一个mean的操作，所以需要乘以batch_size，也就是X.shape[0]
-                metric.add(l * X.shape[0], ksd.accuracy(y_hat, y), X.shape[0])
+                metric.add(l * X.shape[0], ultis.accuracy(y_hat, y), X.shape[0])
             timer.stop()
             train_l = metric[0] / metric[2]
             train_acc = metric[1] / metric[2]
@@ -293,11 +288,11 @@ def train_classifier_by_autoencoder_and_save(net, ae,train_iter, test_iter, num_
     # 使用随机梯度下降算法
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = nn.CrossEntropyLoss()
-    timer, num_batches = ksd.Timer(), len(train_iter)
+    timer, num_batches = ultis.Timer(), len(train_iter)
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}\n--------------------------------')
         # 训练损失之和，训练准确率之和，样本数
-        metric = ksd.Accumulator(3)
+        metric = ultis.Accumulator(3)
         net.train()
         for i, (X, y) in enumerate(train_iter):
             timer.start()
@@ -309,7 +304,7 @@ def train_classifier_by_autoencoder_and_save(net, ae,train_iter, test_iter, num_
             optimizer.step()
             with torch.no_grad():
                 # pytorch 计算交叉熵的时候会有一个mean的操作，所以需要乘以batch_size，也就是X.shape[0]
-                metric.add(l * X.shape[0], ksd.accuracy(y_hat, y), X.shape[0])
+                metric.add(l * X.shape[0], ultis.accuracy(y_hat, y), X.shape[0])
 
             optimizer.zero_grad()
             X_rec = ae(X)
@@ -319,7 +314,7 @@ def train_classifier_by_autoencoder_and_save(net, ae,train_iter, test_iter, num_
             optimizer.step()
             with torch.no_grad():
                 # pytorch 计算交叉熵的时候会有一个mean的操作，所以需要乘以batch_size，也就是X.shape[0]
-                metric.add(l * X.shape[0], ksd.accuracy(y_hat, y), X.shape[0])
+                metric.add(l * X.shape[0], ultis.accuracy(y_hat, y), X.shape[0])
 
             timer.stop()
             train_l = metric[0] / metric[2]
@@ -350,11 +345,11 @@ def train_autoencoder(ae, train_iter, test_iter, num_epochs, lr, device):
     ae.to(device)
     optimizer = torch.optim.Adam(ae.parameters(), lr=lr)
     loss = nn.MSELoss()
-    timer, num_batches = ksd.Timer(), len(train_iter)
+    timer, num_batches = ultis.Timer(), len(train_iter)
     for epoch in range(num_epochs):
         # 训练损失之和，训练准确率之和，样本数
         print(f'Epoch {epoch + 1}\n--------------------------------')
-        metric = ksd.Accumulator(2)
+        metric = ultis.Accumulator(2)
         ae.train()
         for i, (X, y) in enumerate(train_iter):
             timer.start()
@@ -403,11 +398,11 @@ def train_autoencoder_and_save(autoencoder, train_iter, test_iter, num_epochs, l
     autoencoder.to(device)
     optimizer = torch.optim.Adam(autoencoder.parameters(), lr=lr, weight_decay=1e-5)
     loss_fn = nn.MSELoss()
-    timer, num_batches = ksd.Timer(), len(train_iter)
+    timer, num_batches = ultis.Timer(), len(train_iter)
     for epoch in range(num_epochs):
         # 训练损失之和，训练准确率之和，样本数
         print(f'Epoch {epoch + 1}\n--------------------------------')
-        metric = ksd.Accumulator(2)
+        metric = ultis.Accumulator(2)
         autoencoder.train()
         for i, (X, _) in enumerate(train_iter):
             timer.start()
@@ -424,7 +419,7 @@ def train_autoencoder_and_save(autoencoder, train_iter, test_iter, num_epochs, l
             train_l = metric[0] / metric[1]
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
                 print(f'loss {train_l:.7f}')
-        test_loss = ksd.evaluate_loss_gpu(autoencoder, test_iter, loss_fn)
+        test_loss = ultis.evaluate_loss_gpu(autoencoder, test_iter, loss_fn)
         print(f'test loss {test_loss:.7f}')
     print(f'{metric[1] * num_epochs / timer.sum():.1f} examples/sec '
           f'on {str(device)}')
@@ -566,7 +561,7 @@ def jenson_shannon_divergence(net_1_logits, net_2_logits):
     loss = 0.0
     loss += F.kl_div(F.log_softmax(net_1_logits, dim=1), total_m, reduction="none")
     loss += F.kl_div(F.log_softmax(net_2_logits, dim=1), total_m, reduction="none")
-    return (0.5 * ksd.reduce_sum(loss, 1))
+    return (0.5 * ultis.reduce_sum(loss, 1))
 
 
 def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
@@ -582,7 +577,7 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
             dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(i))
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             for X, _ in data_iter_adv:
-                X = ksd.astype(X, torch.float32).to(device)
+                X = ultis.astype(X, torch.float32).to(device)
                 X_rec = autoencoder(X)
                 jsd_tensor = jenson_shannon_divergence(classifier(X), classifier(X_rec))
 
@@ -592,7 +587,7 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
             dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             for X, _ in data_iter_adv:
-                X = ksd.astype(X, torch.float32).to(device)
+                X = ultis.astype(X, torch.float32).to(device)
                 X_rec = autoencoder(X)
                 jsd_tensor = jenson_shannon_divergence(classifier(X), classifier(X_rec))
 
@@ -611,7 +606,7 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             l2_distance = []
             for X,_ in data_iter_adv:
-                X = ksd.astype(X, torch.float32).to(device)
+                X = ultis.astype(X, torch.float32).to(device)
                 X_rec = autoencoder(X)
                 for x, x_rec in zip(X, X_rec):
                     l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
@@ -623,7 +618,7 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             l2_distance = []
             for X, _ in data_iter_adv:
-                X = ksd.astype(X, torch.float32).to(device)
+                X = ultis.astype(X, torch.float32).to(device)
                 X_rec = autoencoder(X)
                 for x, x_rec in zip(X, X_rec):
                     l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
@@ -643,7 +638,7 @@ def test_defence(dataset_name, device=None, attack_name='fgsm'):
         net.to(device)
         net.eval()
         test_num = 100
-        test_data_set = ksd.load_data_mnist_test(test_num)
+        test_data_set = ultis.load_data_mnist_test(test_num)
         find_1 = 0
         fix_1 = 0
         totall_adv = 0
@@ -665,7 +660,7 @@ def test_defence(dataset_name, device=None, attack_name='fgsm'):
                     with torch.no_grad():
                         adv_pre, is_adv = net(torch.unsqueeze(x_adv, 0))
                         totall_adv += 1
-                        if ksd.argmax(adv_pre, 1) == y_iter[i]:
+                        if ultis.argmax(adv_pre, 1) == y_iter[i]:
                             fix_1 += 1
                         if is_adv:
                             find_1 += 1
@@ -678,6 +673,7 @@ def test_defence(dataset_name, device=None, attack_name='fgsm'):
 
 def show_images_ae_minst(decode_images, x_test):
     """
+
     plot the images.
     :param decode_images: the images after decoding
     :param x_test: testing data
@@ -754,11 +750,17 @@ def where(cond, x, y):
     return (cond*x) + ((1-cond)*y)
 
 
+def copy_tensor(x):
+    return x.detach().clone()
+
+
+
 
 argmax = lambda x, *args, **kwargs: x.argmax(*args, **kwargs)
 astype = lambda x, *args, **kwargs: x.type(*args, **kwargs)
 reduce_sum = lambda x, *args, **kwargs: x.sum(*args, **kwargs)
 size = lambda x, *args, **kwargs: x.numel(*args, **kwargs)
+clone_detach = lambda x: x.clone().detach()
 
 if __name__ == '__main__':
     # logit_1 = torch.Tensor([[1, 3], [1, 1]])
@@ -768,7 +770,7 @@ if __name__ == '__main__':
     # print("hello_world")
     # get_test_denfence_dataset(test, attack_params=(1, 2))
     # get_thread_hold_by_distance("mnist", drop_rate=0.01, device=ksd.try_gpu())
-    get_thread_hold_by_prodiv("mnist", drop_rate=0.01, device=ksd.try_gpu())
+    get_thread_hold_by_prodiv("mnist", drop_rate=0.01, device=ultis.try_gpu())
     # torch.cuda.empty_cache()
     # test_defence('mnist', try_gpu())
     # dataset = torchvision.datasets.MNIST(
