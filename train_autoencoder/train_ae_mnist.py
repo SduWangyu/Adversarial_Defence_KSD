@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-import utils as ksd
+from utils import misc as ksd
 import matplotlib.pyplot as plt
 
 
@@ -39,7 +39,7 @@ class AutoEncoder_MNIST(nn.Module):
     # nn.ConvTranspose2d(16, 8, kernel_size=5, stride=3,padding=1),nn.ReLU(True),
     # nn.ConvTranspose2d(8, 1, kernel_size=2, stride=2,padding=1),nn.ReLU(),
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_availabel() else 'cpu'
 
 def show_images(decode_images, x_test):
     """

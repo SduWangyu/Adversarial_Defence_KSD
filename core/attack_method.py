@@ -1,10 +1,8 @@
 import torch
 from torch.autograd import Variable
-import numpy as np
 import torch.utils.data.dataset
 from torch import nn
-import utils
-from custom_dataset import load_data
+from utils import misc
 
 
 def get_adv_img_tensor(img_teonsor, device=None):
@@ -14,11 +12,11 @@ def get_adv_img_tensor(img_teonsor, device=None):
 
 def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
            x_val_min=-1, x_val_max=1, device=None):
-    x_adv = Variable(utils.copy_tensor(x_input).to(device), requires_grad=True)
+    x_adv = Variable(misc.copy_tensor(x_input).to(device), requires_grad=True)
     loss_fn = nn.CrossEntropyLoss()
     for i in range(iteration):
         h_adv = net(x_adv)
-        adv_label = utils.argmax(h_adv, 1)
+        adv_label = misc.argmax(h_adv, 1)
         if target:
             loss = loss_fn(h_adv, y_input)
             if adv_label == y_input:
@@ -34,16 +32,16 @@ def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
 
         x_adv.grad.sign_()
         x_adv = x_adv - alpha * x_adv.grad
-        x_adv = utils.where(x_adv > x_input + eps, x_input + eps, x_adv)
-        x_adv = utils.where(x_adv < x_input - eps, x_input - eps, x_adv)
+        x_adv = misc.where(x_adv > x_input + eps, x_input + eps, x_adv)
+        x_adv = misc.where(x_adv < x_input - eps, x_input - eps, x_adv)
         x_adv = torch.clamp(x_adv, x_val_min, x_val_max)
         x_adv = Variable(x_adv.data, requires_grad=True)
-    adv_label = utils.argmax(h_adv, 1)
+    adv_label = misc.argmax(h_adv, 1)
     return x_adv, adv_label
 
 
 def deepfool(net, x_input, y_input, target_label=None, max_iterations=100, num_labels=10, overshoot=0.02, device=None):
-    x_adv = Variable(utils.copy_tensor(x_input).to(device), requires_grad=True)
+    x_adv = Variable(misc.copy_tensor(x_input).to(device), requires_grad=True)
     for param in net.parameters():
         param.requires_grad = False
     input_shape = x_adv.shape
@@ -53,12 +51,12 @@ def deepfool(net, x_input, y_input, target_label=None, max_iterations=100, num_l
     if target_label:
         for epoch in range(max_iterations):
             h_adv = net(x_adv)
-            adv_label = utils.argmax(h_adv, 1)
+            adv_label = misc.argmax(h_adv, 1)
             print(f'epoch: {epoch}, label:{adv_label}, score:{h_adv[0, adv_label]}')
             if adv_label == target_label:
                 return x_adv, adv_label
             h_adv[0, y_input].backward(retain_graph=True)
-            org_label_grad = utils.copy_tensor(x_adv.grad).to(device)
+            org_label_grad = misc.copy_tensor(x_adv.grad).to(device)
             x_adv.grad.zero_()
             h_adv[0, target_label].backward(retain_graph=True)
             w = x_adv.grad - org_label_grad
@@ -71,14 +69,14 @@ def deepfool(net, x_input, y_input, target_label=None, max_iterations=100, num_l
     else:
         for epoch in range(max_iterations):
             h_adv = net(x_adv)
-            adv_label = utils.argmax(h_adv, 1)
+            adv_label = misc.argmax(h_adv, 1)
             # print(h_adv[0, y_input])
             # print(f'epoch: {epoch}, label:{adv_label}, score:{h_adv[0, adv_label]}')
             if adv_label != y_input:
                 print("success")
                 return x_adv, adv_label
             h_adv[0, y_input].backward(retain_graph=True)
-            org_label_grad = utils.copy_tensor(x_adv.grad.data).to(device)
+            org_label_grad = misc.copy_tensor(x_adv.grad.data).to(device)
             for k in range(0, num_labels):
                 if k == y_input:
                     continue
@@ -230,36 +228,24 @@ def cw_l2(net, x_input, y_input, max_iterations=1000, learning_rate=0.01, binary
     return o_bestattack, o_bestscore
 
 
-if __name__ == "__main__":
-    import classifiers as clfs
-    from torchvision import transforms
 
-    trans = transforms.Compose([transforms.ToTensor()])
-    data_iter = load_data("mnist", batch_size=1, val_type=2, trans=trans, val_account=0.002)
 
-    device = utils.try_gpu()
-    net = clfs.ClassiferMNIST()
-    net.load_exist()
-    net.to(device)
-    for X, y in data_iter:
-        X, y = X.to(device), y.to(device)
-        X_adv, y_adv = cw_l2(net, X, y, device=device, target_label=(y.data+1)%10)
-        break
+
 
     # original_image_path = "./pics/cropped_panda.jpg"
     # ToTensor_transform = transforms.Compose([transforms.Resize((224, 224)),
     #                                          transforms.ToTensor(),
     #                                          transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
     #
-    # original_image_tensor = ksd.image_preprocessing(original_image_path, ToTensor_transform, is_unsqueeze=True)
+    # original_image_tensor = misc.image_preprocessing(original_image_path, ToTensor_transform, is_unsqueeze=True)
     #
     # adv_image_tensor = Variable(original_image_tensor.clone().detach().to(device))
     # adv_image_tensor.requires_grad = True
 
-    # test_dataloader = ksd.load_data_mnist_test(16)
+    # test_dataloader = misc.load_data_mnist_test(16)
     # for X, y in test_dataloader:
     #     X, y = X.to(device), y.to(device)
-    #     y_hat_ori = ksd.argmax(model(X), 1)
+    #     y_hat_ori = misc.argmax(model(X), 1)
     #     print(y_hat_ori)
     #     print(y)
     #     target_label = (y_hat_ori + 1) % 10
@@ -269,7 +255,7 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load('./models/classifiers/classifier_mnist.pth'))
     # model.eval()
     # model.to(device)
-    # test_data_set = ksd.load_data_mnist_test(100)
+    # test_data_set = misc.load_data_mnist_test(100)
     # for X_iter, y_iter in test_data_set:
     #     for i in range(100):
     #         print(X_iter[i].shape)
@@ -283,8 +269,8 @@ if __name__ == "__main__":
     # score = score / torch.sum(output, dtype=torch.float32)
     # print("score={},label={}".format(score.data, label.data))
     # # adv_image_tensor = deepfool_target(model, original_image_tensor, target_label=288)
-    # adv_image_tensor = fgsm(model, original_image_tensor, e=0.001, device=ksd.try_gpu())
+    # adv_image_tensor = fgsm(model, original_image_tensor, e=0.001, device=misc.try_gpu())
     # # adv_image_tensor = deepfool_untarget(model, original_image_tensor, original_label=label)
     # # adv_image_tensor = cw(model, original_image_tensor, target_label=288)
-    # ksd.transform_to_img_from_dataset(adv_image_tensor.cpu().clone().detach(), ToTensor_transform, "pics/test111_adv.png")
-    # ksd.show_images_diff(original_image_tensor, adv_image_tensor.cpu().clone().detach(), ToTensor_transform, label, 288)
+    # misc.transform_to_img_from_dataset(adv_image_tensor.cpu().clone().detach(), ToTensor_transform, "pics/test111_adv.png")
+    # misc.show_images_diff(original_image_tensor, adv_image_tensor.cpu().clone().detach(), ToTensor_transform, label, 288)

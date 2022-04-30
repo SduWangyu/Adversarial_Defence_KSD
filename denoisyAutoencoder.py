@@ -10,12 +10,6 @@ import numpy as np
 
 
 
-def add_noise(train_data, test_data):
-    train_data_noisy = train_data + NOISE_FACTOR * np.random.normal(loc=0.0, scale=1.0, size=train_data.shape)
-    test_data_noisy = test_data + NOISE_FACTOR * np.random.normal(loc=0.0, scale=1.0, size=test_data.shape)
-    train_data_noisy = np.clip(train_data_noisy, 0., 1.).to(torch.float32)
-    test_data_noisy = np.clip(test_data_noisy, 0., 1.).to(torch.float32)
-    return train_data_noisy, test_data_noisy
 
 
 class Denoise_AutoEncoder_MNIST(nn.Module):
@@ -109,7 +103,7 @@ def test_loop(dataloader, noise_dataloader,model, loss_fn):
 if __name__ == '__main__':
     NOISE_FACTOR = 0.1
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_availabel() else "cpu"
     model = Denoise_AutoEncoder_MNIST()
     model.to(device)
 

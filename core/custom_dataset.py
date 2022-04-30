@@ -1,10 +1,10 @@
 import torch
 import torchvision
+from torchvision import transforms
 from torch.utils import data
-import numpy as np
-import classifiers as clfs
-import attack_method as am
+import core.attack_method as am
 from torch.utils.data import random_split
+import utils.constants as cst
 
 dataloader_workers = 4
 data_root = "./data"
@@ -13,8 +13,8 @@ data_root = "./data"
 class CustomDataset(data.Dataset):
     def __init__(self, data_size):
         super(CustomDataset, self).__init__()
-        self.x = np.zeros(data_size)
-        self.y = np.zeros(data_size[0])
+        self.x = torch.zeros(data_size)
+        self.y = torch.zeros(data_size[0])
 
     def __getitem__(self, index):
         img, label = self.x[index], self.y[index]
@@ -28,19 +28,33 @@ class CustomDataset(data.Dataset):
         self.y[index] = data_in[1]
 
 
-def load_data(name, batch_size, trans, val_type=0, val_account=0.1):
+def load_data(name, batch_size, val_type=0, val_account=0.1):
     """
 
+    :param val_account:
+    :param val_type:
     :param name: dataset name
     :param batch_size:
     :param trans: transform compose
     :return:
     """
+
     if name == "mnist":
         method = torchvision.datasets.MNIST
     elif name == "cifar10":
         method = torchvision.datasets.CIFAR10
     elif name == "cifar100":
+        transforms_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(15),
+            transforms.ToTensor(),
+            transforms.Normalize(cst.cifar10_train_mean, cst.cifar10_train_std)
+        ])
+        transforms_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(cst.cifar10_train_mean, cst.cifar10_train_std)
+        ])
         method = torchvision.datasets.CIFAR100
     elif name == "imagenet":
         method = torchvision.datasets.ImageNet
@@ -51,13 +65,14 @@ def load_data(name, batch_size, trans, val_type=0, val_account=0.1):
         root=data_root,
         train=True,
         download=True,
-        transform=trans
+        transform=transforms_train
     )
+
     if val_type == 0:
         test_data = method(root=data_root,
                            train=False,
                            download=True,
-                           transform=trans)
+                           transform=transforms_test)
 
         return (data.DataLoader(train_data, batch_size, shuffle=True,
                                 num_workers=dataloader_workers),
@@ -69,7 +84,7 @@ def load_data(name, batch_size, trans, val_type=0, val_account=0.1):
         test_data = method(root=data_root,
                            train=False,
                            download=True,
-                           transform=trans)
+                           transform=transforms_test)
         train_data, val_data = random_split(train_data, [int(m - m * val_account), int(m * val_account)])
         return (data.DataLoader(train_data, batch_size, shuffle=True,
                                 num_workers=dataloader_workers),
@@ -121,7 +136,7 @@ def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=2
     for X, y in data_iter:
         X, y = X.to(device), y.to(device)
         X_adv, y_adv = attack(net, X, y, attack_params[param_name], alpha=attack_params['alpha'],
-                                 iteration=attack_params['iteration'], device=device)
+                              iteration=attack_params['iteration'], device=device)
         if y_adv != y:
             dataset_org.update_data(gen_adv_num, (X.clone().detach().cpu().squeeze(0), y.clone().detach().cpu()))
             dataset_adv.update_data(gen_adv_num,
@@ -132,5 +147,7 @@ def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=2
         if gen_adv_num == adv_num:
             break
 
-    torch.save(dataset_adv, f"./data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_adv_{param_name}_{attack_params[param_name] * 10}.pt")
-    torch.save(dataset_org, f"./data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_org_{param_name}_{attack_params[param_name] * 10}.pt")
+    torch.save(dataset_adv,
+               f"./data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_adv_{param_name}_{attack_params[param_name] * 10}.pt")
+    torch.save(dataset_org,
+               f"./data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_org_{param_name}_{attack_params[param_name] * 10}.pt")

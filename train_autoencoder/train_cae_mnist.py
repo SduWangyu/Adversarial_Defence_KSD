@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-import utils as ksd
+from utils import misc as ksd
 import matplotlib.pyplot as plt
 
 
@@ -23,7 +23,7 @@ class ConvAutoEncoder_MNIST(nn.Module):
         return output
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_availabel() else 'cpu'
 
 
 def show_images(decode_images, x_test):

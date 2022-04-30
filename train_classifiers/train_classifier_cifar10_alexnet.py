@@ -1,9 +1,6 @@
 import torch
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor, Resize, Compose
 from torch import nn
-import utils as ksd
+from utils import misc as ksd
 
 Classifier_CIFAR100 = nn.Sequential(
             # 这里，我们使用一个11*11的更大窗口来捕捉对象。
@@ -82,7 +79,7 @@ def init_weights(m):
 
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_availabel() else 'cpu'
 if __name__ == '__main__':
     batch_size = 32
     train_iter, test_iter = ksd.load_data_cifar_10(batch_size, resize=224)

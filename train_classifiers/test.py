@@ -3,7 +3,7 @@ import torchvision.models as models
 from torchvision import datasets
 from torchvision.transforms import ToTensor, Resize, Compose
 if __name__ == '__main__':
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_availabel() else 'cpu'
     alexnet = models.alexnet(pretrained=True).eval()
     mnist_train_dataset = datasets.MNIST(
         root='../data',
