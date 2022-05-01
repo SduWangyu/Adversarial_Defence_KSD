@@ -70,7 +70,7 @@ if __name__ == '__main__':
     lr, num_epochs = 0.001, 50
     net = AutoEncoder_MNIST()
     ksd.train_autoencoder(net, train_iter, test_iter, num_epochs, lr, ksd.try_gpu())
-    torch.save(net.state_dict(), '../models/autoencoders/autoencoder_mnist.pth')
+    torch.save(net.state_dict(), '../data/models_trained/autoencoders/autoencoder_mnist.pth')
     for X, y in test_iter:
         print(X[0].shape)
         print(net(X.to(device)).cpu()[0].shape)

@@ -172,10 +172,10 @@ class ResBlock(nn.Module):
         return self.relu(x + conv2)
 
 
-class ResAutoEncoderCIFAR10(nn.Module):
+class ResAutoEncoderCIFAR100(nn.Module):
 
     def __init__(self):
-        super(ResAutoEncoderCIFAR10, self).__init__()
+        super(ResAutoEncoderCIFAR100, self).__init__()
         self.init_conv = nn.Conv2d(3, 16, 3, 1, 1)  # 16 32 32
         self.BN = nn.BatchNorm2d(16)
         self.encode_rb1 = ResBlock(16, 16, 3, 2, 1, 'encode')  # 16 16 16

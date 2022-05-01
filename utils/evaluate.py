@@ -77,3 +77,5 @@ def jenson_shannon_divergence(net_1_logit, net_2_logit):
     loss += F.kl_div(F.log_softmax(net_1_logit, dim=1), total_m, reduction="none")
     loss += F.kl_div(F.log_softmax(net_2_logit, dim=1), total_m, reduction="none")
     return 0.5 * loss.sum(dim=1)
+
+
