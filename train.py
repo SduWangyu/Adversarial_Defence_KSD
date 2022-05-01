@@ -1,7 +1,7 @@
 from torch import nn
-from utils.misc import *
-from torch.optim import lr_scheduler
-
+import utils.evaluate as evaluate
+from utils.misc import Timer, Accumulator
+import torch
 
 
 
@@ -36,6 +36,8 @@ def train_classifier(net, train_iter, test_iter, num_epochs, lr, device, model_n
     train_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2)
     loss = nn.CrossEntropyLoss()
     timer, num_batches = Timer(), len(train_iter)
+
+    max_test_acc = 0
     for epoch in range(num_epochs):
         print(f'Epoch {epoch + 1}\n--------------------------------')
         # 训练损失之和，训练准确率之和，样本数
@@ -72,13 +74,16 @@ def train_classifier(net, train_iter, test_iter, num_epochs, lr, device, model_n
                 print(f'loss {train_l:.7f}, train acc {(train_acc * 100):>0.2f}%')
         test_acc = evaluate.accuracy_gpu(net, test_iter, ae=ae)
         print(f'test acc {(100 * test_acc):>.2f}%\n')
+        if test_acc >= max_test_acc:
+            max_test_acc = test_acc
+            if model_name:
+                torch.save(net.state_dict(), model_name)
 
     print(f'loss {train_l:.3f}, train acc {train_acc:.3f}, '
           f'test acc {test_acc:.3f}')
     print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
           f'on {str(device)}')
-    if model_name:
-        torch.save(net.state_dict(), model_name)
+
 
 
 def train_autoencoder(autoencoder, train_iter, test_iter, num_epochs, lr, device, noise_factor=0.3,
