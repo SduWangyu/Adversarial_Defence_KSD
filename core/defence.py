@@ -1,8 +1,15 @@
+import torch
+from torchvision.transforms import ToTensor, Compose
+import utils.misc as misc
+from core.custom_dataset import *
+from core.autoencoders import *
+from core.deployed_defensive_model import *
+from utils import evaluate
 
 
 def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
     if dataset_name == "mnist":
-        autoencoder = aes.ConvAutoEncoderMNIST()
+        autoencoder = ConvAutoEncoderMNIST()
         autoencoder.load_exist()
         autoencoder.to(device)
         classifier = clfs.ClassiferMNIST()
@@ -31,41 +38,52 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
             print(thr)
 
 
-def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
+def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
     if dataset_name == "mnist":
-        autoencoder = aes.ConvAutoEncoderMNIST()
-        autoencoder.load_exist()
+        autoencoder = ConvAutoEncoderCIFAR10()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10.pth")
         autoencoder.to(device)
-        for i in range(1, 6):
-            print(i)
-            print()
-            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(i))
-            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
-            l2_distance = []
-            for X, _ in data_iter_adv:
-                X = X.astype(torch.float32).to(device)
-                X_rec = autoencoder(X)
-                for x, x_rec in zip(X, X_rec):
-                    l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
-            l2_distance_tensor = torch.Tensor(l2_distance)
-            thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
-            print(thr)
+    if dataset_name == "cifar10":
+        autoencoder = ConvAutoEncoderCIFAR10()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10.pth")
+        autoencoder.to(device)
+    i_i = [1]
+    data_iter_adv, _ = load_data("cifar10", batch_size=15, transforms_train=Compose([ToTensor()]),
+                                 transforms_test=Compose([ToTensor()]))
+    for i in i_i:
+        print(i)
+        if i == 30:
+            continue
+        print()
+        dataset_org = torch.load("../data/validation_data/validation_data_cifar10__200_cw_30_org.pt")
+        data_iter_org = DataLoader(dataset_org, batch_size=200)
+        l2_distance = []
+        for X, _ in data_iter_org:
+            X = X.type(torch.float32).to(device)
+            X_rec = autoencoder(X)
+            for x, x_rec in zip(X, X_rec):
+                l2_distance.append(torch.dist(x, x_rec, p=p).cpu().detach().clone())
+            break
+        l2_distance_tensor = torch.Tensor(l2_distance)
+        thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
+        print(thr)
 
-            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
-            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
-            l2_distance = []
-            for X, _ in data_iter_adv:
-                X = X.astype(torch.float32).to(device)
-                X_rec = autoencoder(X)
-                for x, x_rec in zip(X, X_rec):
-                    l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
-            l2_distance_tensor = torch.Tensor(l2_distance)
-            thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
-            print(thr)
+        dataset_adv = torch.load("../data/validation_data/validation_data_cifar10_200_cw_30_adv.pt")
+        data_iter_adv = DataLoader(dataset_adv, batch_size=200)
+        # data_iter_org = load_data("cifar10", batch_size=15)
+        l2_distance = []
+        for X, _ in data_iter_adv:
+            X = X.type(torch.float32).to(device)
+            X_rec = autoencoder(X)
+            for x, x_rec in zip(X, X_rec):
+                l2_distance.append(torch.dist(x, x_rec, p=p).cpu().clone().detach())
+            break
+        l2_distance_tensor = torch.Tensor(l2_distance)
+        thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
+        print(thr)
 
-            # dataset_org = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
-            # data_iter_org = data.DataLoader(dataset_adv, batch_size=200)
-
+        # dataset_org = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
+        # data_iter_org = data.DataLoader(dataset_adv, batch_size=200)
 
 
 # def test_defence(dataset_name, device=None, attack_name='fgsm'):
@@ -107,21 +125,47 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=2, device=None):
 #             break
 
 
-def get_test_denfence_dataset(attack_method, dataset_name=None, attack_params=None, val_data_num=100):
-    # if dataset_name == "mnist":
-    #     dataset = torchvision.datasets.MNIST(
-    #         root="./data",
-    #         transform=transforms.ToTensor(),
-    #         train=True
-    #     )
-    #     val_data, _ = random_split(dataset, [val_data_num*2, len(dataset)-val_data_num*2])
-    #
-    # if attack_method == "fgsm":
-    #     pass
-    #
-    # # for X, y in val_data:
-    # #
-    # torch.save(val_data, "./data/validation_data/validation_data_mnist.pt")
-    # attack_method("helloworld", attack_params)
-    # dataset = torch.load("./data/validation_data/validation_data_mnist.pt")
-    attack_method("helo", attack_params)
+def test_denfence_dataset_mnist(attack_method,device="cpu"):
+    net = DefenceMNIST()
+    net.to(device)
+    if attack_method == "fgsm":
+        for i in range(0, 50, 10):
+            import os
+            print(os.getcwd())
+            data_adv = torch.load("../data/validation_data/validation_data_mnist_200_cw_{}_adv.pt".format(i))
+            data_org = torch.load("../data/validation_data/validation_data_mnist__200_cw_{}_org.pt".format(i))
+            data_iter_adv = DataLoader(data_adv, batch_size=1)
+            data_iter_org = DataLoader(data_org, batch_size=1)
+            yep = 0
+            fix = 0
+            fix_1 = 0
+            error = 0
+            for (x_adv, y_adv), (x_org, y_org) in zip(data_iter_adv, data_iter_org):
+                x_adv, y_adv = x_adv.type(torch.float).to(device), y_adv.to(device)
+                y_pre, y_is_adv = net(x_adv)
+                if y_is_adv:
+                    yep += 1
+                else:
+                    y_pre.argmax(1) == y_adv
+                    fix += 1
+                x_org, y_org = x_org.type(torch.float).to(device), y_org.to(device)
+                y_pre, y_is_adv = net(x_adv)
+                if y_is_adv:
+                    error += 1
+                else:
+                    y_pre.argmax(1) == y_org
+                    fix_1 += 1
+            print(yep)
+            print(error)
+            print(fix)
+            print(fix_1)
+            print()
+
+
+
+
+
+if __name__ == "__main__":
+    get_thread_hold_by_distance("cifar10", device=misc.try_gpu())
+
+    # test_denfence_dataset_mnist("fgsm", device=misc.try_gpu())

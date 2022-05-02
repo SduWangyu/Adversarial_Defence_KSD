@@ -83,7 +83,7 @@ def train_classifier(net, train_iter, test_iter, num_epochs, lr, device, model_n
           f'on {str(device)}')
 
 
-def train_autoencoder(autoencoder, train_iter, test_iter, num_epochs, lr, device, noise_factor=0.3,
+def train_autoencoder(autoencoder, train_iter, test_iter, num_epochs, lr, device, noise_factor=0.1,
                       model_name=None):
     """
     用GPU去噪训练自编器
@@ -91,8 +91,8 @@ def train_autoencoder(autoencoder, train_iter, test_iter, num_epochs, lr, device
     autoencoder.apply(init_weights)
     print('training on', device)
     autoencoder.to(device)
-    optimizer = torch.optim.SGD(autoencoder.parameters(), lr=lr, momentum=0.9, weight_decay=1e-3)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 60, 0.1)
+    optimizer = torch.optim.Adam(autoencoder.parameters())
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
     loss_fn = nn.MSELoss()
     num_batches = len(train_iter)
     best_loss = 999
@@ -116,7 +116,7 @@ def train_autoencoder(autoencoder, train_iter, test_iter, num_epochs, lr, device
                 print(f'loss {train_l:.7f}')
         test_loss = evaluate.loss_gpu(autoencoder, test_iter, loss_fn)
         print(f'test loss {test_loss:.7f}')
-        scheduler.step()
+        # scheduler.step()
 
         if best_loss > test_loss:
             best_loss = test_loss

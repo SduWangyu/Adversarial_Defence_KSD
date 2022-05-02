@@ -1,5 +1,6 @@
 from torch import nn
 import torch
+import numpy as np
 
 
 class AutoEncoderMNIST(nn.Module):
@@ -108,13 +109,10 @@ class ConvAutoEncoderMNIST(nn.Module):
         x = self.decoder_conv(x)
         return x
 
-    def load_exist(self, path, is_eval=True):
+    def load_exist(self, path="../data/models_trained/autoencoders/cov_mnist.pth", is_eval=True):
         self.load_state_dict(torch.load(path))
         if is_eval:
             self.eval()
-
-
-test_tensor = torch.rand((1, 3, 32, 32))
 
 
 class ConvAutoEncoderCIFAR10(nn.Module):
@@ -123,21 +121,27 @@ class ConvAutoEncoderCIFAR10(nn.Module):
         # Input size: [batch, 3, 32, 32]
         # Output size: [batch, 3, 32, 32]`
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 12, 4, stride=2, padding=1),  # [batch, 12, 16, 16]
-            nn.ReLU(),
-            nn.Conv2d(12, 24, 4, stride=2, padding=1),  # [batch, 24, 8, 8]
-            nn.ReLU(),
-            nn.Conv2d(24, 48, 4, stride=2, padding=1),  # [batch, 48, 4, 4]
-            nn.ReLU(),
-        )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(48, 24, 4, stride=2, padding=1),  # [batch, 24, 8, 8]
-            nn.ReLU(),
-            nn.ConvTranspose2d(24, 12, 4, stride=2, padding=1),  # [batch, 12, 16, 16]
-            nn.ReLU(),
-            nn.ConvTranspose2d(12, 3, 4, stride=2, padding=1),  # [batch, 3, 32, 32]
+            nn.Conv2d(3, 3, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.Sigmoid(),
+            nn.Conv2d(3, 3, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.Sigmoid(),
+            nn.Conv2d(3, 1, 3, stride=1, padding=1),  # [batch, 48, 4, 4]
             nn.Sigmoid(),
         )
+
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(1, 3, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.Sigmoid(),
+            nn.ConvTranspose2d(3, 3, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.Sigmoid(),
+            nn.ConvTranspose2d(3, 3, 3, stride=1, padding=1),  # [batch, 3, 32, 32]
+            nn.Sigmoid(),
+        )
+
+    def load_exist(self, path, is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
 
     def forward(self, x):
         encoded = self.encoder(x)
@@ -170,6 +174,64 @@ class ResBlock(nn.Module):
         if self.resize:
             x = self.BN(self.conv1(x))
         return self.relu(x + conv2)
+
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(BasicBlock, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU()
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
+                               stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
+
+    def forward(self, x):
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = self.relu(out)
+        return out
+
+
+class BasicDecodeBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(BasicDecodeBlock, self).__init__()
+        self.conv1 = nn.ConvTranspose2d(
+            in_planes, in_planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(in_planes)
+        self.relu = nn.ReLU()
+        self.conv2 = nn.Conv2d(in_planes, planes, kernel_size=3,
+                               stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
+
+    def forward(self, x):
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = self.relu(out)
+        return out
 
 
 class BottleNeck(nn.Module):
@@ -221,7 +283,8 @@ class BottleNeckDecode(nn.Module):
         self.c1 = nn.ConvTranspose2d(in_channels, mid_out_channels, kernel_size=1, bias=False)
         self.BN_ex = nn.BatchNorm2d(mid_out_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.c2 = nn.ConvTranspose2d(mid_out_channels, mid_out_channels, stride=stride, kernel_size=3, padding=1, bias=False)
+        self.c2 = nn.ConvTranspose2d(mid_out_channels, mid_out_channels, stride=stride, kernel_size=3, padding=1,
+                                     bias=False)
         # self.BN_ex
         # self.relu
         self.c3 = nn.ConvTranspose2d(mid_out_channels, out_channels, kernel_size=1, bias=False)
@@ -249,26 +312,26 @@ class BottleNeckDecode(nn.Module):
         return tmp
 
 
-class ResAutoEncoderCIFAR100(nn.Module):
+class ResAutoEncoder(nn.Module):
     num_blocks = [3, 4, 6, 3]  # Resnet50
 
-    def __init__(self):
-        super(ResAutoEncoderCIFAR100, self).__init__()
+    def __init__(self, blocks, num_blocks):
+        super(ResAutoEncoder, self).__init__()
         self.in_channels = 64
         self.out_channels = 64
         self.init_conv = nn.Conv2d(3, 64, 3, 1, 1)  # 16 32 32
         self.BN = nn.BatchNorm2d(64)
 
-        self.encode_layer1 = self._make_layer(BottleNeck, 64, self.num_blocks[0], stride=1)
-        self.encode_layer2 = self._make_layer(BottleNeck, 128, self.num_blocks[1], stride=1)  # 32 8 8 - 48 8 8
-        self.encode_layer3 = self._make_layer(BottleNeck, 256, self.num_blocks[2], stride=1)
-        self.encode_layer4 = self._make_layer(BottleNeck, 512, self.num_blocks[3], stride=1)  # 32 8 8 - 48 8 8
+        self.encode_layer1 = self._make_layer(blocks[0], 64, num_blocks[0], stride=1)
+        self.encode_layer2 = self._make_layer(blocks[0], 128, num_blocks[1], stride=1)  # 32 8 8 - 48 8 8
+        self.encode_layer3 = self._make_layer(blocks[0], 256, num_blocks[2], stride=1)
+        self.encode_layer4 = self._make_layer(blocks[0], 512, num_blocks[3], stride=1)  # 32 8 8 - 48 8 8
         self.encode_relu = nn.ReLU()
 
-        self.decode_layer1 = self._make_decode_layer(BottleNeckDecode, 256, self.num_blocks[3], stride=1)
-        self.decode_layer2 = self._make_decode_layer(BottleNeckDecode, 128, self.num_blocks[2], stride=1)
-        self.decode_layer3 = self._make_decode_layer(BottleNeckDecode, 64, self.num_blocks[1], stride=1)
-        self.decode_layer4 = self._make_decode_layer(BottleNeckDecode, 16, self.num_blocks[0], stride=1)
+        self.decode_layer1 = self._make_decode_layer(blocks[1], 256, num_blocks[3], stride=1)
+        self.decode_layer2 = self._make_decode_layer(blocks[1], 128, num_blocks[2], stride=1)
+        self.decode_layer3 = self._make_decode_layer(blocks[1], 64, num_blocks[1], stride=1)
+        self.decode_layer4 = self._make_decode_layer(blocks[1], 16, num_blocks[0], stride=1)
         self.decode_out_conv = nn.ConvTranspose2d(64, 3, 3, 1, 1)  # 3 32 32
         self.decode_tanh = nn.Tanh()
 
@@ -311,30 +374,30 @@ class ResAutoEncoderCIFAR100(nn.Module):
         return output
 
 
-class ResAutoEncoderCIFAR10(nn.Module):
-    num_blocks = [2, 2, 2, 2]  # Resnet18
+class ResBasicAutoEncoder(nn.Module):
+    # num_blocks = [2, 2, 2, 2]  # Resnet18
 
-    def __init__(self):
-        super(ResAutoEncoderCIFAR10, self).__init__()
+    def __init__(self, block, num_blocks):
+        super(ResBasicAutoEncoder, self).__init__()
         self.in_channels = 64
         self.init_conv = nn.Conv2d(3, 64, 3, 1, 1)  # 16 32 32
         self.BN = nn.BatchNorm2d(64)
 
-        self.encode_layer1 = self._make_layer(BottleNeck, 64, self.num_blocks[0], stride=1)
-        self.encode_layer2 = self._make_layer(BottleNeck, 128, self.num_blocks[1], stride=1)  # 32 8 8 - 48 8 8
-        self.encode_layer3 = self._make_layer(BottleNeck, 256, self.num_blocks[2], stride=1)
-        self.encode_layer4 = self._make_layer(BottleNeck, 512, self.num_blocks[3], stride=1)  # 32 8 8 - 48 8 8
+        self.encode_layer1 = self._make_layer(block[0], 64, num_blocks[0], stride=1)
+        self.encode_layer2 = self._make_layer(block[0], 128, num_blocks[1], stride=1)  # 32 8 8 - 48 8 8
+        self.encode_layer3 = self._make_layer(block[0], 256, num_blocks[2], stride=1)
+        self.encode_layer4 = self._make_layer(block[0], 512, num_blocks[3], stride=1)  # 32 8 8 - 48 8 8
         self.encode_relu = nn.ReLU()
 
-        self.decode_layer1 = self._make_decode_layer(BottleNeckDecode, 256, self.num_blocks[3], stride=1)
-        self.decode_layer2 = self._make_decode_layer(BottleNeckDecode, 128, self.num_blocks[2], stride=1)
-        self.decode_layer3 = self._make_decode_layer(BottleNeckDecode, 64, self.num_blocks[1], stride=1)
-        self.decode_layer4 = self._make_decode_layer(BottleNeckDecode, 16, self.num_blocks[0], stride=1)
+        self.decode_layer1 = self._make_decode_layer(block[1], 512, num_blocks[3], stride=1)
+        self.decode_layer2 = self._make_decode_layer(block[1], 256, num_blocks[2], stride=1)
+        self.decode_layer3 = self._make_decode_layer(block[1], 128, num_blocks[1], stride=1)
+        self.decode_layer4 = self._make_decode_layer(block[1], 64, num_blocks[0], stride=1)
         self.decode_out_conv = nn.ConvTranspose2d(64, 3, 3, 1, 1)  # 3 32 32
         self.decode_tanh = nn.Tanh()
 
-    def _make_layer(self, block, out_channels, num_blocks, stride):
-        other_strides = [1] * (num_blocks - 1)
+    def _make_layer(self, block, out_channels, num_block, stride):
+        other_strides = [1] * (num_block - 1)
         layers = []
 
         layers.append(block(self.in_channels, out_channels, stride))
@@ -370,3 +433,5 @@ class ResAutoEncoderCIFAR10(nn.Module):
         output = self.decode_out_conv(output)
         output = self.decode_tanh(output)
         return output
+
+
