@@ -8,7 +8,7 @@ import utils.constants as cst
 
 
 if __name__ == "__main__":
-    net = ae.ResAutoEncoderCIFAR100()
+    net = ae.ResAutoEncoderCIFAR10()
     trans_train = transforms.Compose([transforms.RandomCrop(32, padding=4),
                                       transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(),
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     trans_test = transforms.Compose([transforms.ToTensor(),
                                      transforms.Normalize(cst.cifar100_train_mean,
                                                           cst.cifar100_train_std)])
-    train_iter, test_iter = load_data("cifar100", batch_size=16, transforms_train=trans_train, transforms_test=trans_test)
+    train_iter, test_iter = load_data("cifar10", batch_size=16, transforms_train=trans_train, transforms_test=trans_test)
     # train_classifier(net, train_iter, test_iter, num_epochs=2, lr=0.01,
     #                  device=try_gpu(), model_name='./data/models_trained/classifiers/resnet18_cifar10.pth')
     train_autoencoder(net, train_iter, test_iter, num_epochs=50, lr=0.01,

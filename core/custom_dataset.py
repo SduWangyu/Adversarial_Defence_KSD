@@ -168,13 +168,12 @@ def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=2
                f"../data/validation_data/validation_data_{attack_dataset_name}_{attack_method}_org.pt")
 
 
-img_num, error_num = 0, 0
-adv_num = 0
+global_total_adv_num = 0
+global_target_adv_num = 0
 
 
 class CWThread(threading.Thread):
-    img_num_lock = threading.Lock()
-    error_num_lock = threading.Lock()
+    adv_num_lock = threading.Lock()
 
     def __init__(self, func, args=()):
         super(CWThread, self).__init__()
@@ -191,36 +190,50 @@ class CWThread(threading.Thread):
 
 
 def cw_process(name, net, data_iter, k, device, subset_shape):
+    global global_total_adv_num, global_target_adv_num
     now_adv_num = 0
     dataset_org = CustomDataset(subset_shape)
     dataset_adv = CustomDataset(subset_shape)
-    global img_num, error_num
+    img_num = 0
+    error_num = 0
 
     for X, y in data_iter:
+        # print(f'[{name}]\t{y}')
         y = y.long()
-        CWThread.img_num_lock.acquire()
         img_num += 1
-        CWThread.img_num_lock.release()
+        if not img_num % 100:
+            print(f'[{name}]\timg_num: {img_num}')
+
         X, y = X.to(device), y.to(device)
         h_org = net(X)
         y_org = h_org.argmax(axis=1)
+        # print(f'[{name}]\t{y}, {y_org}')
         if y_org != y:
-            CWThread.error_num_lock.acquire()
             error_num += 1
-            CWThread.error_num_lock.release()
+            # print(f'[{name}]\t{error_num}')
             continue
         X_adv, y_adv = am.cw_l2(net, X, y, k=k, device=device)
-        if y_adv != y:
+        # print(f'[{name}]\t{y}, {y_org}, {y_adv}')
+        if global_target_adv_num == global_total_adv_num:
+            print(f'[{name}]\t{error_num}, {img_num}')
+            break
+
+        if y_adv != y and global_target_adv_num > global_total_adv_num:
             dataset_org.update_data(now_adv_num,
                                     (X.detach().clone().cpu().squeeze(0), y.detach().clone().cpu()))
             dataset_adv.update_data(now_adv_num,
                                     (X_adv.clone().detach().clone().squeeze(0), y.detach().clone().cpu()))
             now_adv_num += 1
+            CWThread.adv_num_lock.acquire()
+            global_total_adv_num += 1
+            CWThread.adv_num_lock.release()
             print(f'[{name}]\tGot {now_adv_num}')
-        if subset_shape[0] == now_adv_num:
-            print(f'{error_num}, {img_num}')
+
+        if global_target_adv_num == global_total_adv_num:
+            print(f'[{name}]\t{error_num}, {img_num}')
             break
-    return dataset_adv, dataset_org
+    print(f'[{name}]\tDone.')
+    return dataset_adv, dataset_org, error_num, img_num
 
 
 def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
@@ -232,7 +245,10 @@ def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
     :param device:
     :return:
     """
-
+    total_error_num = 0
+    total_img_num = 0
+    global global_target_adv_num
+    global_target_adv_num = target_adv_num
     if attack_dataset_name == "mnist":
         dataset_shape = (1, 28, 28)
         net_type = clfs.ClassiferMNIST
@@ -261,21 +277,24 @@ def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
     np.random.shuffle(array)
 
     gen_threads = []
-
+    tmp_num = 0
     for _ in range(constants.thread_num):
         tmp_dataset = CustomDataset((len(data_iter.dataset) // constants.thread_num, ) + dataset_shape)
-        tmp_num = 0
-        for i in array:
-            tmp_dataset.update_data(tmp_num, data_iter.dataset[i])
+
+        for i in range(len(data_iter.dataset) // constants.thread_num):
+            tmp_dataset.update_data(i, data_iter.dataset[tmp_num])
+            tmp_num += 1
         tmp_dataset = DataLoader(tmp_dataset, batch_size=1)
-        # gen_thread = CWThread(cw_process, (str(_), net, tmp_dataset, k, device, (target_adv_num // constants.thread_num,) + dataset_shape))
-        cw_process(str(_), net, tmp_dataset, k, device, (target_adv_num // constants.thread_num,) + dataset_shape)
-        # gen_threads.append(gen_thread)
-        # gen_thread.start()
+        gen_thread = CWThread(cw_process, (str(_), net, tmp_dataset, k, device, (target_adv_num // constants.thread_num,) + dataset_shape))
+        # cw_process(str(_), net, tmp_dataset, k, device, (target_adv_num // constants.thread_num,) + dataset_shape)
+        gen_threads.append(gen_thread)
+        gen_thread.start()
 
     tmp_num = 0
     for res in gen_threads:
-        tmp_dataset_adv, tmp_dataset_org = res.get_result()
+        tmp_dataset_adv, tmp_dataset_org, tmp_error_num, tmp_img_num = res.get_result()
+        total_error_num += tmp_error_num
+        total_img_num += tmp_img_num
         for i in range(len(tmp_dataset_adv)):
             dataset_adv.update_data(tmp_num, tmp_dataset_adv[i])
             dataset_org.update_data(tmp_num, tmp_dataset_org[i])
@@ -285,11 +304,11 @@ def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
         else:
             continue
         break
-
+    print(f'{total_img_num}, {total_error_num}')
     torch.save(dataset_adv,
                f"../data/validation_data/validation_data_{attack_dataset_name}_{target_adv_num}_cw_{k}_adv.pt")
     torch.save(dataset_org,
-               f"../data/validation_data/validation_data_{attack_dataset_name}__{target_adv_num}_cw_{k}_org.pt")
+               f"../data/validation_data/validation_data_{attack_dataset_name}_{target_adv_num}_cw_{k}_org.pt")
 
 
 def get_cw_dataset_test(attack_dataset_name, k=0, adv_num=200, device=None):
