@@ -86,7 +86,7 @@ def test_loop(dataloader, model, loss_fn):
         for X, y in dataloader:
             pred = model(X.to(device))
             test_loss += loss_fn(pred, y.to(device)).item()
-            correct += (pred.argmax(1) == y.to(device)).cpu().type(torch.float).sum().item()
+            correct += (pred.argmax(axis=1) == y.to(device)).cpu().type(torch.float).sum().item()
 
     test_loss /= num_batches
     correct /= size

@@ -2,31 +2,28 @@ from torch import nn
 from core import classifiers as clfs, autoencoders as aes
 from torchvision import datasets, transforms
 import torch
-from utils import misc as ksd
+
 
 
 class DefenceMNIST(nn.Module):
     def __init__(self):
         super(DefenceMNIST, self).__init__()
-        self.autoencoder = aes.ConvAutoEncoder(encoded_space_dim=10, fc2_input_dim=128)
-        self.autoencoder.load_state_dict(torch.load('./models/autoencoders/conv_autoencoder_mnist.pth'))
+        self.autoencoder = aes.ConvAutoEncoderMNIST(encoded_space_dim=10, fc2_input_dim=128)
+        self.autoencoder.load_exist()
         self.autoencoder.eval()
-        self.classifier = clfs.Classifer_MNIST()
-        self.classifier.load_state_dict(torch.load('./models/classifiers/classifier_mnist.pth'))
+        self.classifier = clfs.ClassiferMNIST()
+        self.classifier.load_exist()
         self.classifier.eval()
 
     def forward(self, x):
         ths = 0.002
         reg_x = self.autoencoder(x)
-        ori_pre = self.classifier(x)
+        # ori_pre = self.classifier(x)
         rec_pre = self.classifier(reg_x)
-        # print(ori_pre)
-        # print(rec_pre)
-        # print(ksd.jenson_shannon_divergence(ori_pre, rec_pre))
-        if ksd.jenson_shannon_divergence(ori_pre, rec_pre).sum() > ths:
-            return ori_pre, True
+        if torch.dist(x, reg_x, p=2) > 20:
+            return rec_pre, True
         else:
-            return ori_pre, False
+            return rec_pre, False
 
 
 if __name__ == '__main__':

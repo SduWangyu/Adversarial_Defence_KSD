@@ -39,13 +39,13 @@ def accuracy_gpu(net, data_iter, ae=None, device=None):
                 X = X.to(device)
                 X_rec = ae(X)
                 y = y.to(device)
-                metric.add(accuracy(net(X), y), y.size())
-                metric.add(accuracy(net(X_rec), y), y.size())
+                metric.add(accuracy(net(X), y), y.numel())
+                metric.add(accuracy(net(X_rec), y), y.numel())
         else:
             for X, y in data_iter:
                 X = X.to(device)
                 y = y.to(device)
-                metric.add(accuracy(net(X), y), y.size())
+                metric.add(accuracy(net(X), y), y.numel())
     return metric[0] / metric[1]
 
 
@@ -63,7 +63,7 @@ def loss_gpu(net, data_iter, loss_fn, device=None):
         for X, y in data_iter:
             X = X.to(device)
             X_R = net(X)
-            metric.add(X.shape[0] * loss_fn(X_R, X).item(), y.size())
+            metric.add(X.shape[0] * loss_fn(X_R, X).item(), y.numel())
     return metric[0] / metric[1]
 
 
@@ -77,5 +77,3 @@ def jenson_shannon_divergence(net_1_logit, net_2_logit):
     loss += F.kl_div(F.log_softmax(net_1_logit, dim=1), total_m, reduction="none")
     loss += F.kl_div(F.log_softmax(net_2_logit, dim=1), total_m, reduction="none")
     return 0.5 * loss.sum(dim=1)
-
-
