@@ -7,7 +7,7 @@ from core.deployed_defensive_model import *
 from utils import evaluate
 
 
-def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
+def get_thread_hold_by_prodiv(dataset_name, attack_method, drop_rate=0.01, p=2, device=None):
     if dataset_name == "mnist":
         autoencoder = ConvAutoEncoderMNIST()
         autoencoder.load_exist()
@@ -17,7 +17,7 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
         classifier.to(device)
         for i in range(1, 6):
             print(i)
-            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_adv_eps_0{}.pt".format(i))
+            dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_adv.pt")
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             for X, _ in data_iter_adv:
                 X = X.astype(torch.float32).to(device)
@@ -27,7 +27,7 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
             thr, indices = torch.topk(jsd_tensor, 200, dim=0)
             print(thr)
 
-            dataset_adv = torch.load("./data/validation_data/validation_data_mnist_fgsm_org_eps_0{}.pt".format(i))
+            dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
             data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
             for X, _ in data_iter_adv:
                 X = X.astype(torch.float32).to(device)
@@ -38,24 +38,22 @@ def get_thread_hold_by_prodiv(dataset_name, drop_rate=0.01, p=2, device=None):
             print(thr)
 
 
-def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
+def test_defence_by_distance(dataset_name, attack_method, drop_rate=0.01, p=2, device=None):
     if dataset_name == "mnist":
-        autoencoder = ConvAutoEncoderCIFAR10()
-        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10.pth")
+        autoencoder = ConvAutoEncoderMNIST()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_mnist.pth")
         autoencoder.to(device)
     if dataset_name == "cifar10":
         autoencoder = ConvAutoEncoderCIFAR10()
-        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10.pth")
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab.pth")
         autoencoder.to(device)
-    i_i = [1]
-    data_iter_adv, _ = load_data("cifar10", batch_size=15, transforms_train=Compose([ToTensor()]),
-                                 transforms_test=Compose([ToTensor()]))
+    i_i = [1, 5, 10]
     for i in i_i:
         print(i)
         if i == 30:
             continue
         print()
-        dataset_org = torch.load("../data/validation_data/validation_data_cifar10__200_cw_30_org.pt")
+        dataset_org = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
         data_iter_org = DataLoader(dataset_org, batch_size=200)
         l2_distance = []
         for X, _ in data_iter_org:
@@ -68,7 +66,7 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
         thr, indices = torch.topk(l2_distance_tensor, 200, dim=0)
         print(thr)
 
-        dataset_adv = torch.load("../data/validation_data/validation_data_cifar10_200_cw_30_adv.pt")
+        dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_adv.pt")
         data_iter_adv = DataLoader(dataset_adv, batch_size=200)
         # data_iter_org = load_data("cifar10", batch_size=15)
         l2_distance = []
@@ -125,47 +123,65 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
 #             break
 
 
-def test_denfence_dataset_mnist(attack_method,device="cpu"):
+def test_denfence_dataset(dataset_name, attack_method, device="cpu"):
     net = DefenceMNIST()
     net.to(device)
-    if attack_method == "fgsm":
-        for i in range(0, 50, 10):
-            import os
-            print(os.getcwd())
-            data_adv = torch.load("../data/validation_data/validation_data_mnist_200_cw_{}_adv.pt".format(i))
-            data_org = torch.load("../data/validation_data/validation_data_mnist__200_cw_{}_org.pt".format(i))
-            data_iter_adv = DataLoader(data_adv, batch_size=1)
-            data_iter_org = DataLoader(data_org, batch_size=1)
-            yep = 0
-            fix = 0
-            fix_1 = 0
-            error = 0
-            for (x_adv, y_adv), (x_org, y_org) in zip(data_iter_adv, data_iter_org):
-                x_adv, y_adv = x_adv.type(torch.float).to(device), y_adv.to(device)
-                y_pre, y_is_adv = net(x_adv)
-                if y_is_adv:
-                    yep += 1
-                else:
-                    y_pre.argmax(1) == y_adv
-                    fix += 1
-                x_org, y_org = x_org.type(torch.float).to(device), y_org.to(device)
-                y_pre, y_is_adv = net(x_adv)
-                if y_is_adv:
-                    error += 1
-                else:
-                    y_pre.argmax(1) == y_org
-                    fix_1 += 1
-            print(yep)
-            print(error)
-            print(fix)
-            print(fix_1)
-            print()
+    for i in [1, 5, 10]:
+        data_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_adv.pt")
+        data_org = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
+        data_iter_adv = DataLoader(data_adv, batch_size=1)
+        data_iter_org = DataLoader(data_org, batch_size=1)
+        yep = 0
+        fix = 0
+        fix_1 = 0
+        error = 0
+        for (x_adv, y_adv), (x_org, y_org) in zip(data_iter_adv, data_iter_org):
+            x_adv, y_adv = x_adv.type(torch.float).to(device), y_adv.to(device)
+            y_pre, y_is_adv = net(x_adv)
+            if y_is_adv:
+                yep += 1
+            else:
+                y_pre.argmax(1) == y_adv
+                fix += 1
+            x_org, y_org = x_org.type(torch.float).to(device), y_org.to(device)
+            y_pre, y_is_adv = net(x_org)
+            if y_is_adv:
+                error += 1
+            else:
+                y_pre.argmax(1) == y_org
+                fix_1 += 1
+        print('查出的对抗样本数量：', yep)
+        print('误报的对抗样本数量：', error)
+        print('修复的对抗样本数量：', fix)
+        print('正常样本的识别准确率：', fix_1)
+        print()
 
 
-
+def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
+    if dataset_name == "mnist":
+        autoencoder = ConvAutoEncoderMNIST()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_mnist.pth")
+        autoencoder.to(device)
+    if dataset_name == "cifar10":
+        autoencoder = ConvAutoEncoderCIFAR10()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab.pth")
+        autoencoder.to(device)
+    validation_data_iter = load_data(dataset_name, val_type=2, val_account=0.1, batch_size=1,
+                                     transforms_train=torchvision.transforms.Compose([torchvision.transforms.ToTensor()]),
+                                     transforms_test=torchvision.transforms.Compose([torchvision.transforms.ToTensor()]))
+    lp_distance = []
+    for X, _ in validation_data_iter:
+        X = X.to(device)
+        X_r = autoencoder(X)
+        lp_distance.append(torch.dist(X, X_r, p=p).cpu().detach().clone())
+    print(len(lp_distance))
+    lp_distance = torch.Tensor(lp_distance)
+    thr, indices = torch.topk(lp_distance, int(drop_rate * lp_distance.shape[0]), dim=0)
+    print(thr)
+    return
 
 
 if __name__ == "__main__":
-    get_thread_hold_by_distance("cifar10", device=misc.try_gpu())
-
-    # test_denfence_dataset_mnist("fgsm", device=misc.try_gpu())
+    # get_thread_hold_by_distance"cifar10", "fgsm_i", device=misc.try_gpu())
+    test_defence_by_distance("cifar10", "fgsm_i", device=misc.try_gpu())
+    # test_denfence_dataset("cifar10", "fgsm_i", device=misc.try_gpu())

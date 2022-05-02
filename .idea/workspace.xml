@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="b00eedaa-85a6-47ca-9452-701517809f54" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Adversarial_Defence_KSD.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Adversarial_Defence_KSD.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/autoencoders.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/autoencoders.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/classifiers.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/classifiers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/custom_dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/custom_dataset.py" afterDir="false" />
+    <list default="true" id="b00eedaa-85a6-47ca-9452-701517809f54" name="Changes" comment="killass">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/defence.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/defence.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployed_defensive_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/deployed_defensive_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/deployed_defensive_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/core/deployed_defensive_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +34,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.test">
+  <component name="RunManager" selected="Python.defence">
     <configuration name="custom_dataset" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Adversarial_Defence_KSD" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -131,6 +125,10 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="killass" />
+    <option name="LAST_COMMIT_MESSAGE" value="killass" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

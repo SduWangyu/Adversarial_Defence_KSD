@@ -7,8 +7,9 @@ import utils.constants as cst
 
 if __name__ == "__main__":
     net = ae.ResBasicAutoEncoder((ae.BasicBlock, ae.BasicDecodeBlock), [2, 2, 2, 2])
-    trans_train = transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                      transforms.RandomHorizontalFlip(),
+    trans_train = transforms.Compose([
+                                      # transforms.RandomCrop(32, padding=4),
+                                      # transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(),
                                       transforms.Normalize(cst.cifar100_train_mean,
                                                            cst.cifar100_train_std)])
