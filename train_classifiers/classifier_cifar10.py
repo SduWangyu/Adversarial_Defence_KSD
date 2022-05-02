@@ -126,7 +126,7 @@ if __name__ == '__main__':
         train_loop(train_dataloader, model, loss_fn, optimizer)
         test_loop(test_dataloader, model, loss_fn)
 
-    torch.save(model.state_dict(), '../models/classifiers/classifier_cifar10.pth')
+    torch.save(model.state_dict(), '../data/models_trained/classifiers/classifier_cifar10.pth')
     # X = torch.rand(size=(1, 3, 32, 32))
     # for layer in Classifer_CIFAR10().features:
     #     X = layer(X)

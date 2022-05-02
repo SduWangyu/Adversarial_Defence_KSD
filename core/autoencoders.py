@@ -312,43 +312,61 @@ class ResAutoEncoderCIFAR100(nn.Module):
 
 
 class ResAutoEncoderCIFAR10(nn.Module):
+    num_blocks = [2, 2, 2, 2]  # Resnet18
 
     def __init__(self):
         super(ResAutoEncoderCIFAR10, self).__init__()
-        self.init_conv = nn.Conv2d(3, 16, 3, 1, 1)  # 16 32 32
-        self.BN = nn.BatchNorm2d(16)
-        self.encode_rb1 = ResBlock(16, 16, 3, 2, 1, 'encode')  # 16 16 16
-        self.encode_rb2 = ResBlock(16, 32, 3, 1, 1, 'encode')  # 32 16 16
-        self.encode_rb3 = ResBlock(32, 32, 3, 2, 1, 'encode')  # 32 8 8
-        self.encode_rb4 = ResBlock(32, 48, 3, 1, 1, 'encode')  # 48 8 8
-        self.encode_rb5 = ResBlock(48, 48, 3, 2, 1, 'encode')  # 48 4 4
-        self.encode_rb6 = ResBlock(48, 64, 3, 2, 1, 'encode')  # 64 2 2
+        self.in_channels = 64
+        self.init_conv = nn.Conv2d(3, 64, 3, 1, 1)  # 16 32 32
+        self.BN = nn.BatchNorm2d(64)
+
+        self.encode_layer1 = self._make_layer(BottleNeck, 64, self.num_blocks[0], stride=1)
+        self.encode_layer2 = self._make_layer(BottleNeck, 128, self.num_blocks[1], stride=1)  # 32 8 8 - 48 8 8
+        self.encode_layer3 = self._make_layer(BottleNeck, 256, self.num_blocks[2], stride=1)
+        self.encode_layer4 = self._make_layer(BottleNeck, 512, self.num_blocks[3], stride=1)  # 32 8 8 - 48 8 8
         self.encode_relu = nn.ReLU()
 
-        self.decode_rb1 = ResBlock(64, 48, 2, 2, 0, 'decode')  # 48 4 4
-        self.decode_rb2 = ResBlock(48, 48, 2, 2, 0, 'decode')  # 48 8 8
-        self.decode_rb3 = ResBlock(48, 32, 3, 1, 1, 'decode')  # 32 8 8
-        self.decode_rb4 = ResBlock(32, 32, 2, 2, 0, 'decode')  # 32 16 16
-        self.decode_rb5 = ResBlock(32, 16, 3, 1, 1, 'decode')  # 16 16 16
-        self.decode_rb6 = ResBlock(16, 16, 2, 2, 0, 'decode')  # 16 32 32
-        self.decode_out_conv = nn.ConvTranspose2d(16, 3, 3, 1, 1)  # 3 32 32
+        self.decode_layer1 = self._make_decode_layer(BottleNeckDecode, 256, self.num_blocks[3], stride=1)
+        self.decode_layer2 = self._make_decode_layer(BottleNeckDecode, 128, self.num_blocks[2], stride=1)
+        self.decode_layer3 = self._make_decode_layer(BottleNeckDecode, 64, self.num_blocks[1], stride=1)
+        self.decode_layer4 = self._make_decode_layer(BottleNeckDecode, 16, self.num_blocks[0], stride=1)
+        self.decode_out_conv = nn.ConvTranspose2d(64, 3, 3, 1, 1)  # 3 32 32
         self.decode_tanh = nn.Tanh()
 
-    def forward(self, inputs):
-        init_conv = self.encode_relu(self.BN(self.init_conv(inputs)))
-        rb1 = self.encode_rb1(init_conv)
-        rb2 = self.encode_rb2(rb1)
-        rb3 = self.encode_rb3(rb2)
-        rb4 = self.encode_rb4(rb3)
-        rb5 = self.encode_rb5(rb4)
-        rb6 = self.encode_rb6(rb5)
+    def _make_layer(self, block, out_channels, num_blocks, stride):
+        other_strides = [1] * (num_blocks - 1)
+        layers = []
 
-        rb1 = self.decode_rb1(rb6)
-        rb2 = self.decode_rb2(rb1)
-        rb3 = self.decode_rb3(rb2)
-        rb4 = self.decode_rb4(rb3)
-        rb5 = self.decode_rb5(rb4)
-        rb6 = self.decode_rb6(rb5)
-        out_conv = self.decode_out_conv(rb6)
-        output = self.decode_tanh(out_conv)
+        layers.append(block(self.in_channels, out_channels, stride))
+        self.in_channels = out_channels * block.expansion
+        for _stride in other_strides:
+            layers.append(block(self.in_channels, out_channels, _stride))
+
+        return nn.Sequential(*layers)
+
+    def _make_decode_layer(self, block, out_channels, num_blocks, stride):
+        other_strides = [1] * (num_blocks - 1)
+        layers = []
+
+        for _stride in other_strides:
+            layers.append(block(self.in_channels, self.in_channels, _stride))
+
+        layers.append(block(self.in_channels, out_channels * block.expansion, stride))
+        self.in_channels = out_channels * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, inputs):
+        init_conv = self.init_conv(inputs)
+        init_conv = self.encode_relu(self.BN(init_conv))
+        rb1 = self.encode_layer1(init_conv)
+        rb2 = self.encode_layer2(rb1)
+        rb3 = self.encode_layer3(rb2)
+        rb4 = self.encode_layer4(rb3)
+
+        rb5 = self.decode_layer1(rb4)
+        rb6 = self.decode_layer2(rb5)
+        rb7 = self.decode_layer3(rb6)
+        output = self.decode_layer4(rb7)
+        output = self.decode_out_conv(output)
+        output = self.decode_tanh(output)
         return output

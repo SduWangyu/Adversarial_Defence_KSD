@@ -61,4 +61,4 @@ if __name__ == '__main__':
     lr, num_epochs = 0.001, 20
 
     ksd.train_autoencoder(net, train_iter, test_iter, num_epochs, lr, ksd.try_gpu())
-    torch.save(net.state_dict(), '../models/autoencoders/conv_autoencoder_mnist.pth')
+    torch.save(net.state_dict(), '../data/models_trained/autoencoders/conv_autoencoder_mnist.pth')

@@ -86,4 +86,4 @@ if __name__ == '__main__':
     lr, num_epochs = 0.01, 100
     net = Classifier_CIFAR100
     ksd.train_classifier(net, train_iter, test_iter, num_epochs, lr, ksd.try_gpu())
-    torch.save(net.state_dict(), '../models/classifiers/classifer_cifar10.pth')
+    torch.save(net.state_dict(), '../data/models_trained/classifiers/classifier_cifar10.pth')

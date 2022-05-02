@@ -16,7 +16,7 @@ def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
     loss_fn = nn.CrossEntropyLoss()
     for i in range(iteration):
         h_adv = net(x_adv)
-        adv_label = misc.argmax(h_adv, 1)
+        adv_label = h_adv.argmax(1)
         if target:
             loss = loss_fn(h_adv, y_input)
             if adv_label == y_input:
@@ -36,7 +36,7 @@ def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
         x_adv = misc.where(x_adv < x_input - eps, x_input - eps, x_adv)
         x_adv = torch.clamp(x_adv, x_val_min, x_val_max)
         x_adv = Variable(x_adv.data, requires_grad=True)
-    adv_label = misc.argmax(h_adv, 1)
+    adv_label = h_adv.argmax(1)
     return x_adv, adv_label
 
 
@@ -51,7 +51,7 @@ def deepfool(net, x_input, y_input, target_label=None, max_iterations=100, num_l
     if target_label:
         for epoch in range(max_iterations):
             h_adv = net(x_adv)
-            adv_label = misc.argmax(h_adv, 1)
+            adv_label = h_adv.argmax(1)
             print(f'epoch: {epoch}, label:{adv_label}, score:{h_adv[0, adv_label]}')
             if adv_label == target_label:
                 return x_adv, adv_label
@@ -69,7 +69,7 @@ def deepfool(net, x_input, y_input, target_label=None, max_iterations=100, num_l
     else:
         for epoch in range(max_iterations):
             h_adv = net(x_adv)
-            adv_label = misc.argmax(h_adv, 1)
+            adv_label = h_adv.argmax(1)
             # print(h_adv[0, y_input])
             # print(f'epoch: {epoch}, label:{adv_label}, score:{h_adv[0, adv_label]}')
             if adv_label != y_input:
@@ -139,7 +139,7 @@ def cw_l2(net, x_input, y_input, max_iterations=1000, learning_rate=0.01, binary
         tlb = torch.eye(num_labels)[y_input].float().to(device)
 
     for outer_step in range(binary_search_steps):
-        print("o_bestl2={} confidence={}".format(o_bestl2, confidence))
+        # print("o_bestl2={} confidence={}".format(o_bestl2, confidence))
         # 把原始图像转换成图像数据和扰动的形态
         timg = Variable(torch.arctanh((x_input.data - boxplus) / boxmul * 0.999999).to(device).float())
         modifier = Variable(torch.zeros_like(timg).to(device).float())
@@ -176,13 +176,13 @@ def cw_l2(net, x_input, y_input, max_iterations=1000, learning_rate=0.01, binary
             sc = output.data
             # print out the losses every 10%
             pred = sc.argmax()
-            if iteration % (max_iterations // 10) == 0:
-                print("iteration={} loss={} loss1={} loss2={} pred={}".format(iteration, loss, loss1, loss2, pred))
+            # if iteration % (max_iterations // 10) == 0:
+                # print("iteration={} loss={} loss1={} loss2={} pred={}".format(iteration, loss, loss1, loss2, pred))
 
             if target_label:
 
                 if (l2 < o_bestl2) and (sc.argmax(axis=1) == target_label):
-                    print("attack success l2={} target_label={}".format(l2, target_label))
+                    # print("attack success l2={} target_label={}".format(l2, target_label))
                     o_bestl2 = l2
                     o_bestscore = sc.argmax(axis=1)
                     o_bestattack = newimg.data
@@ -190,7 +190,7 @@ def cw_l2(net, x_input, y_input, max_iterations=1000, learning_rate=0.01, binary
                 if (l2 < o_bestl2) and (pred != y_input):
                     # print("attack success l2={} target_label={} pro={}".format(l2,target_label,pro))
                     # print("attack success l2={} label={}".format(l2,pred))
-                    print("attack success l2={} label={}".format(l2, pred))
+                    # print("attack success l2={} label={}".format(l2, pred))
                     o_bestl2 = l2
                     o_bestscore = pred
                     o_bestattack = newimg.data
@@ -224,7 +224,7 @@ def cw_l2(net, x_input, y_input, max_iterations=1000, learning_rate=0.01, binary
                     confidence = (lower_bound + upper_bound) / 2
                 else:
                     confidence *= 10
-        print("outer_step={} confidence {}->{}".format(outer_step, confidence_old, confidence))
+        # print("outer_step={} confidence {}->{}".format(outer_step, confidence_old, confidence))
     return o_bestattack, o_bestscore
 
 

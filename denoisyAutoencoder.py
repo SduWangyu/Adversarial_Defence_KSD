@@ -142,5 +142,5 @@ if __name__ == '__main__':
         print(f"Epoch {t + 1}\n-------------------------------")
         train_loop(train_dataloader, train_noisy_dataloader, model, loss_fn, optimizer)
         test_loop(test_dataloader, test_noisy_dataloader, model, loss_fn)
-    torch.save(model.state_dict(), './models/autoencoders/denoise_autoencoder_mnist.pth')
+    torch.save(model.state_dict(), 'data/models_trained/autoencoders/denoise_autoencoder_mnist.pth')
     show_images(model(x_test_noisy.to(device)).to('cpu'), x_test)
