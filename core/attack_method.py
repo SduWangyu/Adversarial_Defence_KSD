@@ -10,7 +10,7 @@ def get_adv_img_tensor(img_teonsor, device=None):
     return adv_image_tensor
 
 
-def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=100,
+def fgsm_i(net, x_input, y_input, target=False, eps=0.1, alpha=1, iteration=1000,
            x_val_min=-1, x_val_max=1, device=None):
     x_adv = Variable(misc.copy_tensor(x_input).to(device), requires_grad=True)
     loss_fn = nn.CrossEntropyLoss()

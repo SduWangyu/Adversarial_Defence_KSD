@@ -2,7 +2,7 @@ from torch import nn
 from core import classifiers as clfs, autoencoders as aes
 from torchvision import datasets, transforms
 import torch
-
+import utils.evaluate as evt
 
 
 class DefenceMNIST(nn.Module):
@@ -16,7 +16,7 @@ class DefenceMNIST(nn.Module):
         self.classifier.eval()
 
     def forward(self, x):
-        ths = 61.1826
+        ths = 999
         reg_x = self.autoencoder(x)
         # ori_pre = self.classifier(x)
         rec_pre = self.classifier(reg_x)
@@ -27,24 +27,30 @@ class DefenceMNIST(nn.Module):
 
 
 class DefenceCIFAR10(nn.Module):
-    def __init__(self):
+    def __init__(self, thr):
         super(DefenceCIFAR10, self).__init__()
         self.autoencoder = aes.ConvAutoEncoderCIFAR10()
         self.autoencoder.load_exist(path=r'C:\Users\Fra\Desktop\Adversarial_Defence_KSD\data\models_trained\autoencoders\cov_cifar10_colab.pth')
         self.autoencoder.eval()
-        self.classifier = clfs.ClassifierCIFAR10()
+        self.classifier = clfs.ResNet18CIFAR10()
         self.classifier.load_exist()
         self.classifier.eval()
+        self.thr = thr
 
     def forward(self, x):
-        ths = 461.302
+        # ths = 461.302
         reg_x = self.autoencoder(x)
         # ori_pre = self.classifier(x)
         rec_pre = self.classifier(reg_x)
-        if torch.dist(x, reg_x, p=1) > ths:
+        org_pre = self.classifier(x)
+        if evt.jenson_shannon_divergence(rec_pre, org_pre) > self.thr:
             return rec_pre, True
         else:
             return rec_pre, False
+        # if torch.dist(x, reg_x, p=1) > ths:
+        #     return rec_pre, True
+        # else:
+        #     return rec_pre, False
 
 
 if __name__ == '__main__':

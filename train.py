@@ -106,7 +106,7 @@ def train_autoencoder(autoencoder, train_iter, test_iter, num_epochs, lr, device
             X = X.to(device)
             X_noise = add_noise(X, noise_factor)
             X_R = autoencoder(X_noise)
-            loss = loss_fn(X, X_R)
+            loss = loss_fn(X_R, X)
             loss.backward()
             optimizer.step()
             with torch.no_grad():

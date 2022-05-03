@@ -383,9 +383,9 @@ def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
         break
     print(f'{total_img_num}, {total_error_num}')
     torch.save(dataset_adv,
-               f"../data/validation_data/validation_data_{attack_dataset_name}_{target_adv_num}_cw_{k}_adv.pt")
+               f"../data/validation_data/validation_data_{attack_dataset_name}_cw_{k}_adv.pt")
     torch.save(dataset_org,
-               f"../data/validation_data/validation_data_{attack_dataset_name}_{target_adv_num}_cw_{k}_org.pt")
+               f"../data/validation_data/validation_data_{attack_dataset_name}_cw_{k}_org.pt")
 
 
 def get_cw_dataset_test(attack_dataset_name, k=0, adv_num=200, device=None):

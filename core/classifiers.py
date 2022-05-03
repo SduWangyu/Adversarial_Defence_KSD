@@ -71,7 +71,7 @@ class ClassifierCIFAR10(nn.Module):
         x = self.features(x)
         return x
 
-    def load_exist(self, path="../models/classifiers/classifier_cifar10.pth", is_eval=True):
+    def load_exist(self, path="../data/models_trained/classifiers/resnet18_cifar10.pth", is_eval=True):
         self.load_state_dict(torch.load(path))
         if is_eval:
             self.eval()

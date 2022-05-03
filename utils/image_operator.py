@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
-import constants
+from utils import constants
 
 
 class MapIdToHumanString:
@@ -34,9 +34,9 @@ def transform_reverse(ori_image_tensor, to_tensor_transform, pic_name=None):
     param transforms: torchvision.transforms
     param pic_name: pic path and name
     """
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    image_tensor = ori_image_tensor.clone().detach().numpy().squeeze().transpose(1, 2, 0)
+    mean = constants.cifar10_test_mean
+    std = constants.cifar10_test_std
+    image_tensor = ori_image_tensor.clone().detach().numpy().transpose(1, 2, 0)
     if 'Normalize' in str(to_tensor_transform):
         image_tensor = (image_tensor * std) + mean
     if 'ToTensor' in str(to_tensor_transform) or image_tensor.max() < 1.0:
@@ -125,23 +125,115 @@ def show_images_ae(original_images, noised_images, decoded_images):
     :return: None
     """
     n = 10
+    mean = constants.cifar10_test_mean
+    std = constants.cifar10_test_std
     plt.figure(figsize=(20, 4))
     for i in range(n):
-        ax = plt.subplot(2, n, i + 1)
-        ax.imshow(original_images[i].detach().clone().cpu().numpy().transpose(1, 2, 0))
-        plt.gray()
+        tmp_org = np.clip((original_images[i].detach().clone().numpy().transpose(1, 2, 0) * std) + mean, 0, 1)
+        tmp_adv = np.clip((noised_images[i].detach().clone().numpy().transpose(1, 2, 0) * std) + mean, 0, 1)
+        tmp_rec = decoded_images[i].detach().clone().numpy().transpose(1, 2, 0)
+        ax = plt.subplot(5, n, i + 1)
+        print(tmp_rec.shape, tmp_org.shape, tmp_adv.shape)
+        ax.imshow(tmp_org)
+
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
-        ax = plt.subplot(2, n, i + 1 + n)
-        ax.imshow(noised_images[i].detach().clone().cpu().numpy().transpose(1, 2, 0))
-        plt.gray()
+        ax = plt.subplot(5, n, i + 1 + n)
+        ax.imshow(tmp_adv)
+
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
-        ax = plt.subplot(2, n, i + 1 + 2 * n)
-        ax.imshow(decoded_images[i].detach().clone().cpu().numpy().transpose(1, 2, 0))
-        plt.gray()
+        difference = tmp_org - tmp_adv
+        # (-1,1)  -> (0,1)
+        difference = difference / abs(difference).max() / 2.0 + 0.5
+
+        ax = plt.subplot(5, n, i + 1 + 2 * n)
+        ax.imshow(difference)
+
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
+
+        difference = tmp_org - tmp_rec
+        # (-1,1)  -> (0,1)
+        difference = difference / abs(difference).max() / 2.0 + 0.5
+
+        ax = plt.subplot(5, n, i + 1 + 4 * n)
+        ax.imshow(difference)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        ax = plt.subplot(5, n, i + 1 + 3 * n)
+        ax.imshow(tmp_rec)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    plt.show()
+
+
+def show_images_test(original_images, noised_images, decoded_images, n=5):
+    """
+    plot the images.
+    :param original_images: The original image
+    :param noised_images:
+    :param decoded_images: The images after decoding
+    :return: None
+    """
+
+    mean = constants.cifar10_test_mean
+    std = constants.cifar10_test_std
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # tmp_org = np.clip((original_images[i].detach().clone().numpy().transpose(1, 2, 0) * std) + mean, 0, 1)
+        # tmp_adv = np.clip((noised_images[i].detach().clone().numpy().transpose(1, 2, 0) * std) + mean, 0, 1)
+        # tmp_rec = np.clip((decoded_images[i].detach().clone().numpy().transpose(1, 2, 0) * std) + mean, 0, 1)
+        tmp_org = original_images[i].detach().clone().numpy().transpose(1, 2, 0)
+        tmp_adv = noised_images[i].detach().clone().numpy().transpose(1, 2, 0)
+        tmp_rec = np.clip(decoded_images[i].detach().clone().numpy().transpose(1, 2, 0), 0, 1)
+        ax = plt.subplot(5, n, i + 1)
+        # print(tmp_rec.shape, tmp_org.shape, tmp_adv.shape)
+        ax.imshow(tmp_org)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        ax = plt.subplot(5, n, i + 1 + n)
+        ax.imshow(tmp_adv)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        difference = (tmp_org - tmp_adv) / 2.0 + 0.5
+        # (-1,1)  -> (0,1)
+        print(difference)
+        difference = np.clip(difference, 0, 1)
+
+        ax = plt.subplot(5, n, i + 1 + 2 * n)
+        ax.imshow(difference)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        ax = plt.subplot(5, n, i + 1 + 3 * n)
+        ax.imshow(tmp_rec)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        difference = (tmp_org - tmp_rec) / 2.0 + 0.5
+        print(difference)
+        # (-1,1)  -> (0,1)
+        difference = np.clip(difference, 0, 1)
+
+        ax = plt.subplot(5, n, i + 1 + 4 * n)
+        ax.imshow(difference)
+
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+
+
     plt.show()

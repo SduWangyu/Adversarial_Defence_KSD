@@ -1,5 +1,7 @@
 import torch
 from torchvision.transforms import ToTensor, Compose
+import cv2
+import utils.misc
 import utils.misc as misc
 from core.custom_dataset import *
 from core.autoencoders import *
@@ -10,32 +12,41 @@ from utils import evaluate
 def get_thread_hold_by_prodiv(dataset_name, attack_method, drop_rate=0.01, p=2, device=None):
     if dataset_name == "mnist":
         autoencoder = ConvAutoEncoderMNIST()
-        autoencoder.load_exist()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_mnist.pth")
         autoencoder.to(device)
         classifier = clfs.ClassiferMNIST()
         classifier.load_exist()
         classifier.to(device)
-        for i in range(1, 6):
-            print(i)
-            dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_adv.pt")
-            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
-            for X, _ in data_iter_adv:
-                X = X.astype(torch.float32).to(device)
-                X_rec = autoencoder(X)
-                jsd_tensor = evaluate.jenson_shannon_divergence(classifier(X), classifier(X_rec))
+    if dataset_name == "cifar10":
+        autoencoder = ConvAutoEncoderCIFAR10()
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab_noise_factor_001.pth")
+        autoencoder.to(device)
+        classifier = clfs.ResNet18CIFAR10()
+        classifier.load_exist(path="../data/models_trained/classifiers/resnet18_cifar10.pth")
+        classifier.to(device)
 
-            thr, indices = torch.topk(jsd_tensor, 200, dim=0)
-            print(thr)
+    i_i = range(0, 50, 10)
+    for i in i_i:
+        print(i)
+        dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_adv.pt")
+        data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
+        for X, _ in data_iter_adv:
+            X = X.type(torch.float32).to(device)
+            X_rec = autoencoder(X)
+            jsd_tensor = evaluate.jenson_shannon_divergence(classifier(X), classifier(X_rec))
 
-            dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
-            data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
-            for X, _ in data_iter_adv:
-                X = X.astype(torch.float32).to(device)
-                X_rec = autoencoder(X)
-                jsd_tensor = evaluate.jenson_shannon_divergence(classifier(X), classifier(X_rec))
+        thr, indices = torch.topk(jsd_tensor, 200, dim=0)
+        print(thr)
 
-            thr, indices = torch.topk(jsd_tensor, 200, dim=0)
-            print(thr)
+        dataset_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
+        data_iter_adv = data.DataLoader(dataset_adv, batch_size=200)
+        for X, _ in data_iter_adv:
+            X = X.type(torch.float32).to(device)
+            X_rec = autoencoder(X)
+            jsd_tensor = evaluate.jenson_shannon_divergence(classifier(X), classifier(X_rec))
+
+        thr, indices = torch.topk(jsd_tensor, 200, dim=0)
+        print(thr)
 
 
 def test_defence_by_distance(dataset_name, attack_method, drop_rate=0.01, p=2, device=None):
@@ -43,15 +54,16 @@ def test_defence_by_distance(dataset_name, attack_method, drop_rate=0.01, p=2, d
         autoencoder = ConvAutoEncoderMNIST()
         autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_mnist.pth")
         autoencoder.to(device)
-    if dataset_name == "cifar10":
+    elif dataset_name == "cifar10":
         autoencoder = ConvAutoEncoderCIFAR10()
-        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab.pth")
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab_noise_factor_08.pth")
         autoencoder.to(device)
-    i_i = [1, 5, 10]
+    else:
+        raise Exception("No such attack method.")
+    # i_i = [1, 5, 10]
+    i_i = range(0, 50, 10)
     for i in i_i:
         print(i)
-        if i == 30:
-            continue
         print()
         dataset_org = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
         data_iter_org = DataLoader(dataset_org, batch_size=200)
@@ -126,7 +138,8 @@ def test_defence_by_distance(dataset_name, attack_method, drop_rate=0.01, p=2, d
 def test_denfence_dataset(dataset_name, attack_method, device="cpu"):
     net = DefenceMNIST()
     net.to(device)
-    for i in [1, 5, 10]:
+    i_i = range(0, 50, 10)
+    for i in i_i:
         data_adv = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_adv.pt")
         data_org = torch.load(f"../data/validation_data/validation_data_{dataset_name}_{attack_method}_{i}_org.pt")
         data_iter_adv = DataLoader(data_adv, batch_size=1)
@@ -164,7 +177,7 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
         autoencoder.to(device)
     if dataset_name == "cifar10":
         autoencoder = ConvAutoEncoderCIFAR10()
-        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab.pth")
+        autoencoder.load_exist(path="../data/models_trained/autoencoders/cov_cifar10_colab_noise_factor_001.pth")
         autoencoder.to(device)
     validation_data_iter = load_data(dataset_name, val_type=2, val_account=0.1, batch_size=1,
                                      transforms_train=torchvision.transforms.Compose([torchvision.transforms.ToTensor()]),
@@ -181,7 +194,18 @@ def get_thread_hold_by_distance(dataset_name, drop_rate=0.01, p=1, device=None):
     return
 
 
+def denoising_by_cv2(org_image):
+    tmp_image = misc.copy_tensor(org_image).cpu().numpy().transpose(1, 2, 0)
+    tmp_image = cv2.medianBlur(tmp_image, 3)
+
+
+    res_image = torch.Tensor()
+    return res_image
+
+
 if __name__ == "__main__":
     # get_thread_hold_by_distance"cifar10", "fgsm_i", device=misc.try_gpu())
-    test_defence_by_distance("cifar10", "fgsm_i", device=misc.try_gpu())
-    # test_denfence_dataset("cifar10", "fgsm_i", device=misc.try_gpu())
+    # test_defence_by_distance("cifar10", "cw", p=1, device=misc.try_gpu())
+    # get_thread_hold_by_prodiv("cifar10", "cw", device=misc.try_gpu())
+    denoising_by_cv2(torch.rand())
+    test_denfence_dataset("mnist", "cw", device=misc.try_gpu())

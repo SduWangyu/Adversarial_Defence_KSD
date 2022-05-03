@@ -435,3 +435,39 @@ class ResBasicAutoEncoder(nn.Module):
         return output
 
 
+class EzResAutoEncoder(nn.Module):
+
+    def __init__(self):
+        super(EzResAutoEncoder, self).__init__()
+        self.init_conv = nn.Conv2d(3, 16, 3, 1, 1)  # 16 32 32
+        self.BN = nn.BatchNorm2d(16)
+        self.relu = nn.ReLU()
+        tmp_encode_layer = []
+        tmp_encode_layer.append(ResBlock(16, 16, 3, 2, 1, 'encode'))
+        tmp_encode_layer.append(ResBlock(16, 32, 3, 1, 1, 'encode'))
+        tmp_encode_layer.append(ResBlock(32, 32, 3, 2, 1, 'encode'))
+        tmp_encode_layer.append(ResBlock(32, 48, 3, 1, 1, 'encode'))
+        tmp_encode_layer.append(ResBlock(48, 48, 3, 2, 1, 'encode'))
+        tmp_encode_layer.append(ResBlock(48, 64, 3, 2, 1, 'encode'))
+        self.encode_layer = nn.Sequential(*tmp_encode_layer)
+
+        tmp_encode_layer = []
+        tmp_encode_layer.append(ResBlock(64, 48, 2, 2, 0, 'decode'))
+        tmp_encode_layer.append(ResBlock(48, 48, 2, 2, 0, 'decode'))
+        tmp_encode_layer.append(ResBlock(48, 32, 3, 1, 1, 'decode'))
+        tmp_encode_layer.append(ResBlock(32, 32, 2, 2, 0, 'decode'))
+        tmp_encode_layer.append(ResBlock(32, 16, 3, 1, 1, 'decode'))
+        tmp_encode_layer.append(ResBlock(16, 16, 2, 2, 0, 'decode'))
+        self.decode_layer = nn.Sequential(*tmp_encode_layer)
+        self.out_conv = nn.ConvTranspose2d(16, 3, 3, 1, 1)
+        self.tanh = nn.Tanh()
+
+    def forward(self, inputs):
+        init_conv = self.init_conv(inputs)
+        init_conv = self.relu(self.BN(init_conv))
+        encoded = self.encode_layer(init_conv)
+        decoded = self.decode_layer(encoded)
+        out_conv = self.out_conv(decoded)
+        output = self.tanh(out_conv)
+        return output
+
