@@ -18,3 +18,5 @@ EPOCH = 200
 MILESTONES = [60, 120, 160]
 
 thread_num = 10
+
+shift = 2

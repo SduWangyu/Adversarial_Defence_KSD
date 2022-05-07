@@ -113,7 +113,7 @@ def load_data(name, batch_size, val_type=0, val_account=0.1, transforms_train=No
                                num_workers=dataloader_workers)
 
 
-def get_adv_dataset(attack_dataset_name, attack_method, attack_params, adv_num=200, device=None):
+def get_adv_dataset(attack_dataset_name, attack_method, adv_num=200, device=None):
     """
     获取验证的对抗样本-原始数据的数据集
     :param attack_dataset_name:
@@ -268,6 +268,7 @@ class CWThread(threading.Thread):
 
 
 def cw_process(name, net, data_iter, k, device, subset_shape):
+    print(f'[{name}] started.')
     global global_total_adv_num, global_target_adv_num
     now_adv_num = 0
     dataset_org = CustomDataset(subset_shape)
@@ -332,9 +333,7 @@ def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
     elif attack_dataset_name == "cifar10":
         dataset_shape = (3, 32, 32)
         net_type = clfs.ResNet18CIFAR10
-        transforms_train = transforms.Compose([transforms.ToTensor(),
-                                               transforms.Normalize(constants.cifar10_train_mean,
-                                                                    constants.cifar10_train_std)])
+        transforms_train = transforms.Compose([transforms.ToTensor()])
     else:
         raise Exception("Unknown dataset name")
 
@@ -383,9 +382,9 @@ def get_cw_dataset(attack_dataset_name, k=0, target_adv_num=200, device=None):
         break
     print(f'{total_img_num}, {total_error_num}')
     torch.save(dataset_adv,
-               f"../data/validation_data/validation_data_{attack_dataset_name}_cw_{k}_adv.pt")
+               f"../data/validation_data/validation_data_{attack_dataset_name}_cw_{k}_adv_no_normalize.pt")
     torch.save(dataset_org,
-               f"../data/validation_data/validation_data_{attack_dataset_name}_cw_{k}_org.pt")
+               f"../data/validation_data/validation_data_{attack_dataset_name}_cw_{k}_org_no_normalize.pt")
 
 
 def get_cw_dataset_test(attack_dataset_name, k=0, adv_num=200, device=None):
@@ -453,4 +452,5 @@ def get_cw_dataset_test(attack_dataset_name, k=0, adv_num=200, device=None):
 
 
 if __name__ == "__main__":
-    get_cw_dataset("cifar10", k=30, target_adv_num=200, device=try_gpu())
+    # get_cw_dataset("cifar10", k=0, target_adv_num=200, device=try_gpu())
+    get_adv_dataset("cifar10", 'df', device=try_gpu())

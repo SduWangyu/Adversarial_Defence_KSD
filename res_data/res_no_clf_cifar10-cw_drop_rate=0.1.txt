@@ -1,0 +1,25 @@
+cifar10_cw: drop_rate=0.1, noise_factor=0.1
+['denoising_by_Gaussian', 'ConvLargeAutoEncoderCIFAR10']
+00	Adv_acc :100.00%	 - 200 	/ 200
+00	Adv_fix : NaN	 - 0 	/ 0 	checked out after reconstructed.
+10	Adv_acc :100.00%	 - 200 	/ 200
+10	Adv_fix : NaN	 - 0 	/ 0 	checked out after reconstructed.
+20	Adv_acc :100.00%	 - 200 	/ 200
+20	Adv_fix : NaN	 - 0 	/ 0 	checked out after reconstructed.
+30	Adv_acc :100.00%	 - 200 	/ 200
+30	Adv_fix : NaN	 - 0 	/ 0 	checked out after reconstructed.
+40	Adv_acc :100.00%	 - 200 	/ 200
+40	Adv_fix : NaN	 - 0 	/ 0 	checked out after reconstructed.
+	Org_acc :92.00%	 - 184 	/ 200
+	Org_fix :100.00%	 - 16 	/ 16 	fixed after reconstructed.
+	Org_err :3.26%	 - 6 	/ 184 	error after reconstructed.
+cifar10_cw: drop_rate=0.1, noise_factor=0.1
+['denoising_by_Gaussian', 'ConvLargeAutoEncoderCIFAR10']
+	Org_acc :93.50%	 - 187 	/ 200
+	Org_fix :100.00%	 - 13 	/ 13 	fixed after reconstructed.
+	Org_err :5.35%	 - 10 	/ 187 	error after reconstructed.
+cifar10_cw: drop_rate=0.1, noise_factor=0.1
+['denoising_by_Gaussian', 'ConvLargeAutoEncoderCIFAR10']
+cifar10_cw: drop_rate=0.1, noise_factor=0.1
+cifar10_cw: drop_rate=0.1, noise_factor=0.1
+['denoising_by_Gaussian', 'ConvLargeAutoEncoderCIFAR10']

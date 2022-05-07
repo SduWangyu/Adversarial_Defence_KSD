@@ -114,6 +114,140 @@ class ConvAutoEncoderMNIST(nn.Module):
         if is_eval:
             self.eval()
 
+    __name__ = 'ConvAutoEncoderMNIST'
+
+
+class ConvLargeAutoEncoderCIFAR10(nn.Module):
+    def __init__(self):
+        super(ConvLargeAutoEncoderCIFAR10, self).__init__()
+        # Input size: [batch, 3, 32, 32]
+        # Output size: [batch, 3, 32, 32]`
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 16, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.Conv2d(16, 24, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.Conv2d(24, 32, 3, stride=1, padding=1),  # [batch, 48, 4, 4]
+            nn.ReLU(),
+        )
+        # self.liner = nn.Sequential(
+        #     nn.Flatten(),
+        #     nn.Linear(32 * 32 * 32, 1024),
+        #     nn.ReLU(),
+        #     nn.Linear(1024, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 1024),
+        #     nn.ReLU(),
+        #     nn.Linear(1024, 32 * 32 * 32),
+        #     nn.ReLU(),
+        #     nn.Unflatten(1, (32, 32, 32))
+        # )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(32, 24, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.ConvTranspose2d(24, 16, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, 3, 3, stride=1, padding=1),  # [batch, 3, 32, 32]
+            nn.ReLU(),
+        )
+
+    def load_exist(self, path, is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        # linered = self.liner(encoded)
+        decoded = self.decoder(encoded)
+        return decoded
+
+    __name__ = 'ConvLargeAutoEncoderCIFAR10'
+
+
+class ConvLargeAutoEncoderCIFAR10New(nn.Module):
+    def __init__(self):
+        super(ConvLargeAutoEncoderCIFAR10New, self).__init__()
+        # Input size: [batch, 3, 32, 32]
+        # Output size: [batch, 3, 32, 32]`
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 16, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.Conv2d(16, 32, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 3, stride=1, padding=1),  # [batch, 48, 4, 4]
+            nn.ReLU(),
+            nn.Conv2d(64, 92, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.Conv2d(92, 92, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+
+        )
+
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(92, 92, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.ConvTranspose2d(92, 64, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 16, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, 3, 3, stride=1, padding=1),  # [batch, 3, 32, 32]
+            nn.ReLU(),
+        )
+
+    def load_exist(self, path, is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        # linered = self.liner(encoded)
+        decoded = self.decoder(encoded)
+        return decoded
+
+    __name__ = 'ConvLargeAutoEncoderCIFAR10New'
+
+
+class ConvTestAutoEncoderCIFAR10(nn.Module):
+    def __init__(self):
+        super(ConvTestAutoEncoderCIFAR10, self).__init__()
+        # Input size: [batch, 3, 32, 32]
+        # Output size: [batch, 3, 32, 32]`
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 16, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.Conv2d(16, 24, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.Conv2d(24, 32, 3, stride=1, padding=1),  # [batch, 48, 4, 4]
+            nn.ReLU(),
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(32, 24, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
+            nn.ReLU(),
+            nn.ConvTranspose2d(24, 16, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, 3, 3, stride=1, padding=1),  # [batch, 3, 32, 32]
+            nn.ReLU(),
+        )
+
+    def load_exist(self, path, is_eval=True):
+        self.load_state_dict(torch.load(path))
+        if is_eval:
+            self.eval()
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        linered = self.liner(encoded)
+        decoded = self.decoder(linered)
+        return decoded
+
 
 class ConvAutoEncoderCIFAR10(nn.Module):
     def __init__(self):
@@ -122,20 +256,20 @@ class ConvAutoEncoderCIFAR10(nn.Module):
         # Output size: [batch, 3, 32, 32]`
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 3, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.Conv2d(3, 3, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
-            nn.Sigmoid(),
-            nn.Conv2d(3, 1, 3, stride=1, padding=1),  # [batch, 48, 4, 4]
-            nn.Sigmoid(),
+            nn.ReLU(),
+            nn.Conv2d(3, 3, 1, stride=1, padding=1),  # [batch, 48, 4, 4]
+            nn.ReLU(),
         )
 
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(1, 3, 3, stride=1, padding=1),  # [batch, 24, 8, 8]
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.ConvTranspose2d(3, 3, 3, stride=1, padding=1),  # [batch, 12, 16, 16]
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.ConvTranspose2d(3, 3, 3, stride=1, padding=1),  # [batch, 3, 32, 32]
-            nn.Sigmoid(),
+            nn.ReLU(),
         )
 
     def load_exist(self, path, is_eval=True):
@@ -146,7 +280,7 @@ class ConvAutoEncoderCIFAR10(nn.Module):
     def forward(self, x):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
-        return decoded
+        return torch.clamp(decoded, 0, 1)
 
 
 class ResBlock(nn.Module):

@@ -1,0 +1,100 @@
+mnist_fgsm_i: drop_rate=0.05, noise_factor=0.1
+['denoising_by_cv2', 'decrease_color_depth', 'ConvAutoEncoderMNIST']
+[001]-01	Adv_acc :85.50%	 - 171 	/ 200
+[001]-01	Adv_fix :55.17%	 - 16 	/ 29 	checked out after reconstructed.
+[001]-02	Adv_acc :78.50%	 - 157 	/ 200
+[001]-02	Adv_fix :25.58%	 - 11 	/ 43 	checked out after reconstructed.
+[001]-03	Adv_acc :65.00%	 - 130 	/ 200
+[001]-03	Adv_fix :8.57%	 - 6 	/ 70 	checked out after reconstructed.
+[001]-04	Adv_acc :65.50%	 - 131 	/ 200
+[001]-04	Adv_fix :7.25%	 - 5 	/ 69 	checked out after reconstructed.
+[001]-05	Adv_acc :48.50%	 - 97 	/ 200
+[001]-05	Adv_fix :2.91%	 - 3 	/ 103 	checked out after reconstructed.
+[001]		Org_acc :97.00%	 - 194 	/ 200
+[001]		Org_fix :33.33%	 - 2 	/ 6 	fixed after reconstructed.
+[001]		Org_err :0.52%	 - 1 	/ 194 	error after reconstructed.
+--------------------
+[010]-01	Adv_acc :74.00%	 - 148 	/ 200
+[010]-01	Adv_fix :73.08%	 - 38 	/ 52 	checked out after reconstructed.
+[010]-02	Adv_acc :80.00%	 - 160 	/ 200
+[010]-02	Adv_fix :42.50%	 - 17 	/ 40 	checked out after reconstructed.
+[010]-03	Adv_acc :2.00%	 - 4 	/ 200
+[010]-03	Adv_fix :28.57%	 - 56 	/ 196 	checked out after reconstructed.
+[010]-04	Adv_acc :3.00%	 - 6 	/ 200
+[010]-04	Adv_fix :13.92%	 - 27 	/ 194 	checked out after reconstructed.
+[010]-05	Adv_acc :13.00%	 - 26 	/ 200
+[010]-05	Adv_fix :12.64%	 - 22 	/ 174 	checked out after reconstructed.
+[010]		Org_acc :96.00%	 - 192 	/ 200
+[010]		Org_fix :100.00%	 - 8 	/ 8 	fixed after reconstructed.
+[010]		Org_err :3.12%	 - 6 	/ 192 	error after reconstructed.
+--------------------
+[100]-01	Adv_acc :3.00%	 - 6 	/ 200
+[100]-01	Adv_fix :89.18%	 - 173 	/ 194 	checked out after reconstructed.
+[100]-02	Adv_acc :1.50%	 - 3 	/ 200
+[100]-02	Adv_fix :75.63%	 - 149 	/ 197 	checked out after reconstructed.
+[100]-03	Adv_acc :2.00%	 - 4 	/ 200
+[100]-03	Adv_fix :28.57%	 - 56 	/ 196 	checked out after reconstructed.
+[100]-04	Adv_acc :3.50%	 - 7 	/ 200
+[100]-04	Adv_fix :12.44%	 - 24 	/ 193 	checked out after reconstructed.
+[100]-05	Adv_acc :7.00%	 - 14 	/ 200
+[100]-05	Adv_fix :13.44%	 - 25 	/ 186 	checked out after reconstructed.
+[100]		Org_acc :95.50%	 - 191 	/ 200
+[100]		Org_fix :88.89%	 - 8 	/ 9 	fixed after reconstructed.
+[100]		Org_err :2.09%	 - 4 	/ 191 	error after reconstructed.
+--------------------
+[011]-01	Adv_acc :80.00%	 - 160 	/ 200
+[011]-01	Adv_fix :65.00%	 - 26 	/ 40 	checked out after reconstructed.
+[011]-02	Adv_acc :84.50%	 - 169 	/ 200
+[011]-02	Adv_fix :35.48%	 - 11 	/ 31 	checked out after reconstructed.
+[011]-03	Adv_acc :9.50%	 - 19 	/ 200
+[011]-03	Adv_fix :29.28%	 - 53 	/ 181 	checked out after reconstructed.
+[011]-04	Adv_acc :9.00%	 - 18 	/ 200
+[011]-04	Adv_fix :13.19%	 - 24 	/ 182 	checked out after reconstructed.
+[011]-05	Adv_acc :18.50%	 - 37 	/ 200
+[011]-05	Adv_fix :12.88%	 - 21 	/ 163 	checked out after reconstructed.
+[011]		Org_acc :96.50%	 - 193 	/ 200
+[011]		Org_fix :85.71%	 - 6 	/ 7 	fixed after reconstructed.
+[011]		Org_err :1.04%	 - 2 	/ 193 	error after reconstructed.
+--------------------
+[101]-01	Adv_acc :14.50%	 - 29 	/ 200
+[101]-01	Adv_fix :90.06%	 - 154 	/ 171 	checked out after reconstructed.
+[101]-02	Adv_acc :9.00%	 - 18 	/ 200
+[101]-02	Adv_fix :73.63%	 - 134 	/ 182 	checked out after reconstructed.
+[101]-03	Adv_acc :8.50%	 - 17 	/ 200
+[101]-03	Adv_fix :27.32%	 - 50 	/ 183 	checked out after reconstructed.
+[101]-04	Adv_acc :15.50%	 - 31 	/ 200
+[101]-04	Adv_fix :10.65%	 - 18 	/ 169 	checked out after reconstructed.
+[101]-05	Adv_acc :12.00%	 - 24 	/ 200
+[101]-05	Adv_fix :11.93%	 - 21 	/ 176 	checked out after reconstructed.
+[101]		Org_acc :95.00%	 - 190 	/ 200
+[101]		Org_fix :90.00%	 - 9 	/ 10 	fixed after reconstructed.
+[101]		Org_err :1.58%	 - 3 	/ 190 	error after reconstructed.
+--------------------
+[110]-01	Adv_acc :13.00%	 - 26 	/ 200
+[110]-01	Adv_fix :89.08%	 - 155 	/ 174 	checked out after reconstructed.
+[110]-02	Adv_acc :11.00%	 - 22 	/ 200
+[110]-02	Adv_fix :74.16%	 - 132 	/ 178 	checked out after reconstructed.
+[110]-03	Adv_acc :1.00%	 - 2 	/ 200
+[110]-03	Adv_fix :28.79%	 - 57 	/ 198 	checked out after reconstructed.
+[110]-04	Adv_acc :4.00%	 - 8 	/ 200
+[110]-04	Adv_fix :14.06%	 - 27 	/ 192 	checked out after reconstructed.
+[110]-05	Adv_acc :8.50%	 - 17 	/ 200
+[110]-05	Adv_fix :12.57%	 - 23 	/ 183 	checked out after reconstructed.
+[110]		Org_acc :95.50%	 - 191 	/ 200
+[110]		Org_fix :100.00%	 - 9 	/ 9 	fixed after reconstructed.
+[110]		Org_err :2.09%	 - 4 	/ 191 	error after reconstructed.
+--------------------
+[111]-01	Adv_acc :21.50%	 - 43 	/ 200
+[111]-01	Adv_fix :89.17%	 - 140 	/ 157 	checked out after reconstructed.
+[111]-02	Adv_acc :18.50%	 - 37 	/ 200
+[111]-02	Adv_fix :74.85%	 - 122 	/ 163 	checked out after reconstructed.
+[111]-03	Adv_acc :2.50%	 - 5 	/ 200
+[111]-03	Adv_fix :27.69%	 - 54 	/ 195 	checked out after reconstructed.
+[111]-04	Adv_acc :8.00%	 - 16 	/ 200
+[111]-04	Adv_fix :15.22%	 - 28 	/ 184 	checked out after reconstructed.
+[111]-05	Adv_acc :9.50%	 - 19 	/ 200
+[111]-05	Adv_fix :12.71%	 - 23 	/ 181 	checked out after reconstructed.
+[111]		Org_acc :95.00%	 - 190 	/ 200
+[111]		Org_fix :90.00%	 - 9 	/ 10 	fixed after reconstructed.
+[111]		Org_err :2.63%	 - 5 	/ 190 	error after reconstructed.
+--------------------

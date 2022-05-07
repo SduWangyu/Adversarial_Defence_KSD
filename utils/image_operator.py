@@ -133,7 +133,7 @@ def show_images_ae(original_images, noised_images, decoded_images):
         tmp_adv = np.clip((noised_images[i].detach().clone().numpy().transpose(1, 2, 0) * std) + mean, 0, 1)
         tmp_rec = decoded_images[i].detach().clone().numpy().transpose(1, 2, 0)
         ax = plt.subplot(5, n, i + 1)
-        print(tmp_rec.shape, tmp_org.shape, tmp_adv.shape)
+        # print(tmp_rec.shape, tmp_org.shape, tmp_adv.shape)
         ax.imshow(tmp_org)
 
         ax.get_xaxis().set_visible(False)
@@ -174,6 +174,42 @@ def show_images_ae(original_images, noised_images, decoded_images):
     plt.show()
 
 
+def show_one_images(original_images, e_list, in_net):
+    """
+    plot the images.
+    :param original_images: The original image
+    :param noised_images:
+    :param decoded_images: The images after decoding
+    :return: None
+    """
+
+    plt.figure(figsize=(20, 4))
+    n = len(e_list)
+    for i in range(n):
+        constants.shift = e_list[i]
+        for j in range(len(original_images)):
+            # print(original_images[j].shape)
+            tmp_img = in_net(original_images[j])
+            # print(tmp_img.shape)
+            tmp_img = tmp_img.squeeze(0).detach().clone().numpy().transpose(1, 2, 0)
+
+            # ax = plt.subplot(2, n,  i + 1)
+            # # print(tmp_rec.shape, tmp_org.shape, tmp_adv.shape)
+            # ax.imshow(X.squeeze(0).detach().clone().numpy().transpose(1, 2, 0))
+            #
+            # ax.get_xaxis().set_visible(False)
+            # ax.get_yaxis().set_visible(False)
+
+            ax = plt.subplot(2, n, i + 1 + n * j)
+            # print(tmp_rec.shape, tmp_org.shape, tmp_adv.shape)
+            ax.imshow(tmp_img)
+
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+
+    plt.show()
+
+
 def show_images_test(original_images, noised_images, decoded_images, n=5):
     """
     plot the images.
@@ -208,7 +244,7 @@ def show_images_test(original_images, noised_images, decoded_images, n=5):
 
         difference = (tmp_org - tmp_adv) / 2.0 + 0.5
         # (-1,1)  -> (0,1)
-        print(difference)
+        # print(difference)
         difference = np.clip(difference, 0, 1)
 
         ax = plt.subplot(5, n, i + 1 + 2 * n)
@@ -224,7 +260,7 @@ def show_images_test(original_images, noised_images, decoded_images, n=5):
         ax.get_yaxis().set_visible(False)
 
         difference = (tmp_org - tmp_rec) / 2.0 + 0.5
-        print(difference)
+        # print(difference)
         # (-1,1)  -> (0,1)
         difference = np.clip(difference, 0, 1)
 
@@ -233,7 +269,5 @@ def show_images_test(original_images, noised_images, decoded_images, n=5):
 
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-
-
 
     plt.show()

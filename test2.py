@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
+from core.defence import decrease_color_depth, denoising_by_cv2, denoising_by_NlMeans
 import core.attack_method as am
 import core.autoencoders as ae
 from core.custom_dataset import CustomDataset
@@ -8,7 +9,8 @@ from core.custom_dataset import load_data
 from train import train_autoencoder
 from torchvision import transforms
 from utils.misc import try_gpu
-from utils.image_operator import show_images_test
+from utils.image_operator import show_images_test, show_one_images
+
 
 if __name__ == "__main__":
     # net = ae.ConvAutoEncoderCIFAR10()
@@ -44,9 +46,10 @@ if __name__ == "__main__":
     cl = core.classifiers.ResNet18CIFAR10()
     cl.load_exist(path='./data/models_trained/classifiers/resnet18_cifar10.pth')
     cl.to(device)
-    net = ae.ConvAutoEncoderCIFAR10()
-    net.to(device)
-    net.load_exist(path='data/models_trained/autoencoders/cov_cifar10_test.pth')
+    # net = ae.ConvLargeAutoEncoderCIFAR10()
+    # net.to(device)
+    # net.load_exist(path='data/models_trained/autoencoders/cov_cifar10_test_32.pth')
+    net = denoising_by_cv2
     # dataset_adv = torch.load(f"./data/validation_data/validation_data_cifar10_cw_10_adv.pt")
     # data_adv_iter = DataLoader(dataset_adv, batch_size=10)
     # dataset_org = torch.load(f"./data/validation_data/validation_data_cifar10_cw_10_org.pt")
@@ -61,6 +64,7 @@ if __name__ == "__main__":
     for X, _ in data_iter:
         chk = True
         X = X.to(device)
+
         y = _.to(device)
         # X_rec = net(X).cpu()
 
@@ -75,7 +79,9 @@ if __name__ == "__main__":
             tmp = am.fgsm_i(cl, X, y, eps=e, device=device)
             tmp_adv[tmp_count], adv_label = tmp[0].detach().clone().squeeze(0).to(device), tmp[1]
             if adv_label != y:
-                print(y_pre_org, y, adv_label)
+                # show_one_images((X.cpu(), tmp_adv[tmp_count].detach().clone().unsqueeze(0).cpu()), in_net=net, e_list=[i for i in range(8, 0, -1)])
+                # exit()
+                # print(y_pre_org, y, adv_label)
                 break
         if chk:
             tmp_X[tmp_count] = X.detach().clone().squeeze(0)
@@ -84,5 +90,6 @@ if __name__ == "__main__":
         if tmp_count == n:
             break
     X_adv_rec = net(tmp_adv).cpu()
+    # print(tmp_adv[0])
     show_images_test(tmp_X.cpu(), tmp_adv.cpu(), X_adv_rec.cpu(), n=n)
 

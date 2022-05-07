@@ -1,0 +1,44 @@
+mnist_df: drop_rate=0.1, noise_factor=0.1
+['denoising_by_cv2', 'decrease_color_depth', 'ConvAutoEncoderMNIST']
+[001]-01	Adv_acc :94.50%	 - 189 	/ 200
+[001]-01	Adv_fix :36.36%	 - 4 	/ 11 	checked out after reconstructed.
+[001]		Org_acc :89.00%	 - 178 	/ 200
+[001]		Org_fix :86.36%	 - 19 	/ 22 	fixed after reconstructed.
+[001]		Org_err :0.56%	 - 1 	/ 178 	error after reconstructed.
+--------------------
+[010]-01	Adv_acc :16.50%	 - 33 	/ 200
+[010]-01	Adv_fix :93.41%	 - 156 	/ 167 	checked out after reconstructed.
+[010]		Org_acc :91.00%	 - 182 	/ 200
+[010]		Org_fix :100.00%	 - 18 	/ 18 	fixed after reconstructed.
+[010]		Org_err :1.10%	 - 2 	/ 182 	error after reconstructed.
+--------------------
+[100]-01	Adv_acc :7.50%	 - 15 	/ 200
+[100]-01	Adv_fix :92.43%	 - 171 	/ 185 	checked out after reconstructed.
+[100]		Org_acc :90.50%	 - 181 	/ 200
+[100]		Org_fix :94.74%	 - 18 	/ 19 	fixed after reconstructed.
+[100]		Org_err :0.00%	 - 0 	/ 181 	error after reconstructed.
+--------------------
+[011]-01	Adv_acc :34.00%	 - 68 	/ 200
+[011]-01	Adv_fix :93.94%	 - 124 	/ 132 	checked out after reconstructed.
+[011]		Org_acc :91.00%	 - 182 	/ 200
+[011]		Org_fix :100.00%	 - 18 	/ 18 	fixed after reconstructed.
+[011]		Org_err :1.65%	 - 3 	/ 182 	error after reconstructed.
+--------------------
+[101]-01	Adv_acc :12.50%	 - 25 	/ 200
+[101]-01	Adv_fix :93.71%	 - 164 	/ 175 	checked out after reconstructed.
+[101]		Org_acc :88.50%	 - 177 	/ 200
+[101]		Org_fix :86.96%	 - 20 	/ 23 	fixed after reconstructed.
+[101]		Org_err :0.00%	 - 0 	/ 177 	error after reconstructed.
+--------------------
+[110]-01	Adv_acc :5.00%	 - 10 	/ 200
+[110]-01	Adv_fix :93.16%	 - 177 	/ 190 	checked out after reconstructed.
+[110]		Org_acc :89.00%	 - 178 	/ 200
+[110]		Org_fix :100.00%	 - 22 	/ 22 	fixed after reconstructed.
+[110]		Org_err :1.12%	 - 2 	/ 178 	error after reconstructed.
+--------------------
+[111]-01	Adv_acc :12.00%	 - 24 	/ 200
+[111]-01	Adv_fix :94.32%	 - 166 	/ 176 	checked out after reconstructed.
+[111]		Org_acc :89.00%	 - 178 	/ 200
+[111]		Org_fix :100.00%	 - 22 	/ 22 	fixed after reconstructed.
+[111]		Org_err :1.69%	 - 3 	/ 178 	error after reconstructed.
+--------------------
